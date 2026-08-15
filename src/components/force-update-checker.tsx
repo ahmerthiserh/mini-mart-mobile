@@ -43,7 +43,7 @@ export function ForceUpdateChecker() {
   }, []);
 
   const handleUpdate = () => {
-    const playStoreId = Constants.expoConfig?.android?.package || 'minimart.vetristech.com';
+    const playStoreId = Constants.expoConfig?.android?.package || 'com.vetristech.minimart';
     Linking.openURL(`market://details?id=${playStoreId}`);
   };
 

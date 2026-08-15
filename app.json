@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "minimart.vetristech.com",
+      "bundleIdentifier": "com.vetristech.minimart",
       "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -24,7 +24,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "minimart.vetristech.com",
+      "package": "com.vetristech.minimart",
       "versionCode": 3,
       "googleServicesFile": "./google-services.json"
     },
