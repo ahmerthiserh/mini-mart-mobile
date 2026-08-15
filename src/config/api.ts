@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
   STORES: `${API_BASE_URL}/stores`,
   STORE_DETAILS: (id: string | number) => `${API_BASE_URL}/stores/${id}`,
   STORE_PRODUCTS: (id: string | number) => `${API_BASE_URL}/stores/${id}/products`,
+  SELLER_TYPES: `${API_BASE_URL}/seller-types`,
 
   // Categories
   CATEGORIES: `${API_BASE_URL}/categories`,

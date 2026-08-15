@@ -18,7 +18,12 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { Colors } from "@/constants/Colors";
 
-const MENU_ITEMS = [
+import { MenuHeader } from "@/components/menu/menu-header";
+import { SellerCtaCard } from "@/components/menu/seller-cta-card";
+import { QuickDiscovery } from "@/components/menu/quick-discovery";
+import { MenuItemsList, MenuItemType } from "@/components/menu/menu-items-list";
+
+const MENU_ITEMS: MenuItemType[] = [
   {
     id: "1",
     title: "My Orders",
@@ -109,7 +114,7 @@ export default function MenuScreen() {
     );
   };
 
-  const handleMenuItemPress = (item: (typeof MENU_ITEMS)[0]) => {
+  const handleMenuItemPress = (item: MenuItemType) => {
     if (item.authRequired && !isLoggedIn) {
       Alert.alert(
         "Sign In Required",
@@ -133,196 +138,48 @@ export default function MenuScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* GUEST HEADER / USER PROFILE HEADER */}
-        {!isLoggedIn ? (
-          <View
-            style={[
-              styles.profileSection,
-              { borderColor, backgroundColor: cardBg },
-            ]}
-          >
-            <View
-              style={[
-                styles.avatarPlaceholder,
-                {
-                  backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7",
-                  borderColor: isDark ? "#3A3A3C" : "#E5E5EA",
-                },
-              ]}
-            >
-              <Ionicons
-                name="person-outline"
-                size={24}
-                color={isDark ? "#8E8E93" : "#8E8E93"}
-              />
-            </View>
-            <View style={styles.profileInfo}>
-              <ThemedText type="subtitle" style={styles.profileName}>
-                Guest User
-              </ThemedText>
-              <ThemedText style={styles.profileEmail} numberOfLines={1}>
-                Sign in for orders & account
-              </ThemedText>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push("/(auth)/login")}
-              style={[styles.smallSignInBtn, { backgroundColor: primaryColor }]}
-            >
-              <Ionicons name="log-in-outline" size={15} color="#FFF" />
-              <ThemedText style={styles.smallSignInText}>Sign In</ThemedText>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          /* LOGGED IN USER CARD */
-          <View
-            style={[
-              styles.profileSection,
-              { borderColor, backgroundColor: cardBg },
-            ]}
-          >
-            <View
-              style={[
-                styles.avatarPlaceholder,
-                {
-                  backgroundColor: primaryColor + "20",
-                  borderColor: primaryColor + "40",
-                },
-              ]}
-            >
-              <ThemedText
-                style={{
-                  fontSize: 22,
-                  fontWeight: "bold",
-                  color: primaryColor,
-                }}
-              >
-                {user ? getInitials(user.name) : "U"}
-              </ThemedText>
-            </View>
-            <View style={styles.profileInfo}>
-              <ThemedText type="subtitle" style={styles.profileName}>
-                {user?.name || "Account"}
-              </ThemedText>
-              <ThemedText style={styles.profileEmail}>
-                {user?.email || "Signed in"}
-              </ThemedText>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push("/(settings)/personal-info")}
-              style={[styles.editButton, { backgroundColor: primaryColor }]}
-            >
-              <Ionicons name="pencil" size={16} color="#FFF" />
-            </TouchableOpacity>
-          </View>
+        {/* PROFILE / GUEST HEADER */}
+        <MenuHeader
+          isLoggedIn={isLoggedIn}
+          user={user}
+          isDark={isDark}
+          cardBg={cardBg}
+          borderColor={borderColor}
+          getInitials={getInitials}
+          onSignIn={() => router.push("/(auth)/login")}
+          onRegister={() => router.push("/(auth)/register")}
+          onProfilePress={() => router.push("/(settings)/personal-info")}
+        />
+
+        {/* BECOME A SELLER CTA FOR LOGGED IN USERS */}
+        {isLoggedIn && (
+          <SellerCtaCard
+            isDark={isDark}
+            onPress={() => router.push("/(seller)/select-type" as any)}
+          />
         )}
 
         {/* QUICK DISCOVERY SECTION FOR GUESTS */}
         {!isLoggedIn && (
-          <>
-            <ThemedText
-              style={[styles.sectionTitle, { color: isDark ? "#8E8E93" : "#6C6C70" }]}
-            >
-              Explore Mini Mart
-            </ThemedText>
-
-            <View style={styles.quickDiscoveryGrid}>
-              <TouchableOpacity
-                style={[
-                  styles.discoveryCard,
-                  { backgroundColor: cardBg, borderColor },
-                ]}
-                onPress={() => router.push("/stores")}
-              >
-                <View style={[styles.discoveryIconBg, { backgroundColor: "#EBF5FF" }]}>
-                  <Ionicons name="storefront-outline" size={22} color="#007AFF" />
-                </View>
-                <ThemedText style={styles.discoveryTitle}>Stores Directory</ThemedText>
-                <ThemedText style={styles.discoverySub}>Find top local merchants</ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.discoveryCard,
-                  { backgroundColor: cardBg, borderColor },
-                ]}
-                onPress={() => router.push("/categories")}
-              >
-                <View style={[styles.discoveryIconBg, { backgroundColor: "#FFF0F5" }]}>
-                  <Ionicons name="grid-outline" size={22} color="#FF2D55" />
-                </View>
-                <ThemedText style={styles.discoveryTitle}>All Categories</ThemedText>
-                <ThemedText style={styles.discoverySub}>Browse textiles & products</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </>
+          <QuickDiscovery
+            cardBg={cardBg}
+            borderColor={borderColor}
+            isDark={isDark}
+            onStoresPress={() => router.push("/stores")}
+            onCategoriesPress={() => router.push("/categories")}
+          />
         )}
 
         {/* ACCOUNT / SERVICES MENU */}
-        <ThemedText
-          style={[styles.sectionTitle, { color: isDark ? "#8E8E93" : "#6C6C70" }]}
-        >
-          {isLoggedIn ? "Account Services" : "Menu & Features"}
-        </ThemedText>
-
-        <View style={[styles.menuList, { backgroundColor: cardBg, borderColor }]}>
-          {MENU_ITEMS.map((item, index) => {
-            const isLocked = item.authRequired && !isLoggedIn;
-            return (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => handleMenuItemPress(item)}
-                style={[
-                  styles.menuItem,
-                  index < MENU_ITEMS.length - 1 && { borderBottomColor: borderColor },
-                  index === MENU_ITEMS.length - 1 && { borderBottomWidth: 0 },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.iconContainer,
-                    {
-                      backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7",
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={item.icon as any}
-                    size={20}
-                    color={isLocked ? "#8E8E93" : primaryColor}
-                  />
-                </View>
-
-                <View style={styles.menuItemTextContainer}>
-                  <ThemedText
-                    style={[
-                      styles.menuItemTitle,
-                      isLocked && { opacity: 0.7 },
-                    ]}
-                  >
-                    {item.title}
-                  </ThemedText>
-                  {item.subtitle && (
-                    <ThemedText style={styles.menuItemSub}>
-                      {item.subtitle}
-                    </ThemedText>
-                  )}
-                </View>
-
-                {isLocked ? (
-                  <View style={styles.lockBadge}>
-                    <Ionicons name="lock-closed" size={14} color="#8E8E93" />
-                  </View>
-                ) : (
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color={isDark ? "#6C6C70" : "#C7C7CC"}
-                  />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <MenuItemsList
+          menuItems={MENU_ITEMS}
+          isLoggedIn={isLoggedIn}
+          isDark={isDark}
+          cardBg={cardBg}
+          borderColor={borderColor}
+          primaryColor={primaryColor}
+          onItemPress={handleMenuItemPress}
+        />
 
         {/* PREFERENCES */}
         <ThemedText
@@ -388,90 +245,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingTop: 12,
   },
-  /* GUEST & PROFILE HEADER */
-  profileSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    marginHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginBottom: 20,
-    gap: 12,
-  },
-  avatarPlaceholder: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1.5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profileInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  profileName: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  profileEmail: {
-    fontSize: 12,
-    opacity: 0.6,
-  },
-  smallSignInBtn: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: 17,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  smallSignInText: {
-    color: "#FFF",
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  /* QUICK DISCOVERY GRID */
-  quickDiscoveryGrid: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 24,
-  },
-  discoveryCard: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 4,
-  },
-  discoveryIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  discoveryTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  discoverySub: {
-    fontSize: 11,
-    opacity: 0.6,
-  },
-
-  /* COMMON SECTION STYLES */
   sectionTitle: {
     paddingHorizontal: 16,
     fontSize: 12,
@@ -513,9 +286,6 @@ const styles = StyleSheet.create({
   menuItemSub: {
     fontSize: 12,
     opacity: 0.5,
-  },
-  lockBadge: {
-    padding: 4,
   },
   logoutButton: {
     flexDirection: "row",
