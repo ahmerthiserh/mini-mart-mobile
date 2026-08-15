@@ -115,8 +115,7 @@ export default function StoresScreen() {
   };
 
   const handleStorePress = (store: StoreItem) => {
-    setActiveStore(store);
-    fetchStoreProducts(store.id);
+    router.push(`/stores/${store.id}` as any);
   };
 
   const handleAddToCart = async (product: Product) => {
@@ -186,6 +185,8 @@ export default function StoresScreen() {
           <FlatList
             data={stores}
             keyExtractor={(item) => item.id.toString()}
+            numColumns={2}
+            columnWrapperStyle={styles.storeColumnWrapper}
             contentContainerStyle={styles.storesListContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#fff' : '#000'} />}
             renderItem={({ item: store }) => (
@@ -203,7 +204,7 @@ export default function StoresScreen() {
                   )}
                   {store.is_verified && (
                     <View style={styles.verifiedBadge}>
-                      <Ionicons name="checkmark-circle" size={14} color="#00C853" />
+                      <Ionicons name="checkmark-circle" size={12} color="#00C853" />
                       <ThemedText style={styles.verifiedText}>Verified</ThemedText>
                     </View>
                   )}
@@ -216,7 +217,7 @@ export default function StoresScreen() {
                     {store.logo ? (
                       <Image source={{ uri: store.logo }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={200} />
                     ) : (
-                      <ThemedText style={{ fontSize: 20, fontWeight: '800' }}>
+                      <ThemedText style={{ fontSize: 16, fontWeight: '800' }}>
                         {store.store_name.charAt(0).toUpperCase()}
                       </ThemedText>
                     )}
@@ -226,12 +227,9 @@ export default function StoresScreen() {
                     <ThemedText style={styles.storeName} numberOfLines={1}>{store.store_name}</ThemedText>
                     {store.location && (
                       <View style={styles.locationRow}>
-                        <Ionicons name="location-outline" size={12} color={isDark ? '#AAA' : '#666'} />
-                        <ThemedText style={styles.locationText} numberOfLines={1}>{store.location}</ThemedText>
+                        <Ionicons name="location-outline" size={11} color={isDark ? '#AAA' : '#666'} style={{ marginTop: 1 }} />
+                        <ThemedText style={styles.locationText} numberOfLines={2}>{store.location}</ThemedText>
                       </View>
-                    )}
-                    {store.description && (
-                      <ThemedText style={styles.storeDescription} numberOfLines={2}>{store.description}</ThemedText>
                     )}
                   </View>
                 </View>
@@ -326,75 +324,82 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  storeColumnWrapper: {
+    paddingHorizontal: 12,
+    justifyContent: 'space-between',
+  },
   storesListContent: {
-    padding: 12,
-    gap: 14,
+    paddingVertical: 12,
   },
   storeCard: {
+    width: (width - 34) / 2,
+    marginBottom: 12,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
   },
   coverContainer: {
     width: '100%',
-    height: 100,
+    height: 70,
     position: 'relative',
   },
   verifiedBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   verifiedText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: '#fff',
   },
   storeBody: {
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    paddingHorizontal: 8,
+    paddingBottom: 10,
     paddingTop: 0,
     position: 'relative',
-    flexDirection: 'row',
-    gap: 12,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
   logoContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 3,
-    marginTop: -24,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 2,
+    marginTop: -20,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   storeInfoText: {
-    flex: 1,
-    paddingTop: 6,
-    gap: 2,
+    width: '100%',
+    paddingTop: 4,
+    gap: 1,
   },
   storeName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
   },
   locationRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    alignItems: 'flex-start',
+    gap: 3,
   },
   locationText: {
-    fontSize: 11,
+    flex: 1,
+    fontSize: 10,
     opacity: 0.6,
+    lineHeight: 14,
   },
   storeDescription: {
-    fontSize: 12,
+    fontSize: 11,
     opacity: 0.7,
     marginTop: 2,
   },

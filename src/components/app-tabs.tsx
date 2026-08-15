@@ -3,66 +3,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "react-native";
 import { HomeHeader } from "@/components/home-header";
 import { Colors } from "@/constants/Colors";
+import { HIDDEN_ROUTES } from "@/constants/hidden-routes";
 import { useCart } from "@/context/CartContext";
-
-const HIDDEN_ROUTES = [
-  // Orders
-  {
-    name: "(orders)/order-details",
-    title: "Order Details",
-    backHref: "/(orders)/orders" as any,
-  },
-  {
-    name: "(orders)/track-order",
-    title: "Track Order",
-    backHref: "/(orders)/order-details" as any,
-  },
-  // Payment
-  {
-    name: "(payment)/payment",
-    title: "Payment Methods",
-    backHref: "/menu" as any,
-  },
-  {
-    name: "(payment)/edit-payment",
-    title: "Edit Payment",
-    backHref: "/(payment)/payment" as any,
-  },
-  {
-    name: "(payment)/add-payment",
-    title: "Add Payment",
-    backHref: "/(payment)/payment" as any,
-  },
-  // Addresses
-  {
-    name: "(addresses)/addresses",
-    title: "Shipping Addresses",
-    backHref: "/menu" as any,
-  },
-  {
-    name: "(addresses)/add-address",
-    title: "Add Address",
-    backHref: "/(addresses)/addresses" as any,
-  },
-  {
-    name: "(addresses)/edit-address",
-    title: "Edit Address",
-    backHref: "/(addresses)/addresses" as any,
-  },
-  // Settings
-  { name: "(settings)/settings", title: "Settings", backHref: "/menu" as any },
-  {
-    name: "(settings)/personal-info",
-    title: "Personal Info",
-    backHref: "/(settings)/settings" as any,
-  },
-  { name: "(settings)/help", title: "Help", backHref: "/menu" as any },
-  { name: "(settings)/support", title: "Support", backHref: "/menu" as any },
-  // Product
-  { name: "product/[id]", title: "Product Details", backHref: "/" as any },
-  // Checkout
-  { name: "checkout", title: "Checkout", backHref: "/cart" as any },
-];
 
 export default function AppTabs() {
   const scheme = useColorScheme();
@@ -91,7 +33,7 @@ export default function AppTabs() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "bag-handle" : "bag-handle-outline"}
-              size={24}
+              size={23}
               color={color}
             />
           ),
@@ -100,13 +42,13 @@ export default function AppTabs() {
       <Tabs.Screen
         name="stores"
         options={{
-          title: "Stores",
+          title: "Store",
           headerShown: true,
           header: () => <HomeHeader />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "storefront" : "storefront-outline"}
-              size={24}
+              size={23}
               color={color}
             />
           ),
@@ -121,22 +63,11 @@ export default function AppTabs() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "grid" : "grid-outline"}
-              size={24}
+              size={23}
               color={color}
             />
           ),
         }}
-      />
-      <Tabs.Screen 
-        name="(orders)/orders" 
-        options={{
-          title: 'Orders',
-          headerShown: true,
-          header: () => <HomeHeader showSearch={false} title="My Orders" />,
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={24} color={color} />
-          )
-        }} 
       />
       <Tabs.Screen
         name="cart"
@@ -154,7 +85,7 @@ export default function AppTabs() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "cart" : "cart-outline"}
-              size={24}
+              size={23}
               color={color}
             />
           ),
@@ -167,7 +98,7 @@ export default function AppTabs() {
           headerShown: true,
           header: () => <HomeHeader showSearch={false} title="Menu" />,
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'menu' : 'menu-outline'} size={24} color={color} />
+            <Ionicons name={focused ? 'menu' : 'menu-outline'} size={23} color={color} />
           )
         }} 
       />
@@ -225,6 +156,15 @@ export default function AppTabs() {
           href: null,
           headerShown: false,
           tabBarStyle: { display: "none" },
+        }}
+      />
+
+      {/* Store Products Catalog Screen */}
+      <Tabs.Screen
+        name="stores/[id]"
+        options={{
+          href: null,
+          headerShown: false,
         }}
       />
     </Tabs>
