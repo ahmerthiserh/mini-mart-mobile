@@ -85,12 +85,12 @@ export default function AppTabs() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "Market",
           headerShown: true,
           header: () => <HomeHeader />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "home" : "home-outline"}
+              name={focused ? "bag-handle" : "bag-handle-outline"}
               size={24}
               color={color}
             />
@@ -100,12 +100,12 @@ export default function AppTabs() {
       <Tabs.Screen
         name="categories"
         options={{
-          title: "Categories",
+          title: "Store",
           headerShown: true,
           header: () => <HomeHeader />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "grid" : "grid-outline"}
+              name={focused ? "storefront" : "storefront-outline"}
               size={24}
               color={color}
             />
