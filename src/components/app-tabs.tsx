@@ -98,14 +98,29 @@ export default function AppTabs() {
         }}
       />
       <Tabs.Screen
-        name="categories"
+        name="stores"
         options={{
-          title: "Store",
+          title: "Stores",
           headerShown: true,
           header: () => <HomeHeader />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "storefront" : "storefront-outline"}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="categories"
+        options={{
+          title: "Categories",
+          headerShown: true,
+          header: () => <HomeHeader />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "grid" : "grid-outline"}
               size={24}
               color={color}
             />
