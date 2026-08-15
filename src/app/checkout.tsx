@@ -121,7 +121,7 @@ export default function CheckoutScreen() {
           style={{ flex: 1 }} 
           startInLoadingState={true}
           onNavigationStateChange={(navState: any) => {
-            if (navState.url.startsWith('https://mini-mart.vetristech.com') || navState.url.startsWith('http://localhost:8000')) {
+            if (navState.url.startsWith('https://minimart.vetristech.com') || navState.url.startsWith('http://localhost:8000')) {
               router.replace(`/(orders)/order-details?orderId=${placedOrderId}`);
             }
           }}

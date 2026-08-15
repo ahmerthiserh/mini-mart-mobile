@@ -87,9 +87,9 @@ export function CategoriesList({ activeCategoryId, onSelectCategory, refreshTrig
 
 const styles = StyleSheet.create({
   categoriesContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     gap: 6,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   categoryChip: {
     flexDirection: 'row',

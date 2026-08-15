@@ -4,7 +4,7 @@
 // If testing on Android Emulator, 'http://10.0.2.2:8000/api' points to your local machine (e.g., your Laravel backend)
 // If testing on iOS Simulator, you can use 'http://localhost:8000/api' or 'http://127.0.0.1:8000/api'
 
-export const API_BASE_URL = 'https://mini-mart.vetristech.com/api';
+export const API_BASE_URL = 'https://minimart.vetristech.com/api';
 
 export const API_ENDPOINTS = {
   // Authentication & Profile

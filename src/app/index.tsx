@@ -58,11 +58,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categoriesHeader: {
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   scrollContent: {
-    paddingTop: 8,
-    paddingBottom: 20,
+    paddingTop: 4,
+    paddingBottom: 16,
   },
 });

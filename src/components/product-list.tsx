@@ -336,55 +336,55 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
 
 const styles = StyleSheet.create({
   columnWrapper: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
     justifyContent: "space-between",
   },
   productGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
     justifyContent: "space-between",
   },
   productCard: {
-    width: (width - 50) / 2, // 2 columns with padding
-    marginBottom: 16,
+    width: (width - 34) / 2, // 2 columns with tight spacing
+    marginBottom: 10,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 8,
+    borderRadius: 14,
+    padding: 6,
   },
   productImageContainer: {
     width: "100%",
     aspectRatio: 1,
-    marginBottom: 12,
+    marginBottom: 6,
   },
   productImage: {
     width: "100%",
     height: "100%",
   },
   productInfo: {
-    gap: 4,
+    gap: 2,
   },
   productCategory: {
-    fontSize: 12,
+    fontSize: 11,
     opacity: 0.6,
   },
   productName: {
-    fontSize: 14,
+    fontSize: 13,
   },
   productFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 4,
+    marginTop: 2,
   },
   productPrice: {
     fontWeight: "700",
-    fontSize: 16,
+    fontSize: 14,
   },
   addButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },

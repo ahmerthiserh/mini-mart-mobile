@@ -24,6 +24,11 @@ To build an `.ipa` file using Expo Application Services (EAS):
    ```bash
    npx eas-cli build --platform ios --profile preview
    ```
+3. **Build AAB for Play Store**:
+   ```bash
+   npx expo run:android --no-build-cache
+   ```
 
-*Note: EAS will manage your Apple credentials or prompt you to log into your Apple Developer account.*
+*Note:`` EAS will manage your Apple credentials or prompt you to log into your Apple Developer account.*
+
 

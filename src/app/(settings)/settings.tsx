@@ -18,11 +18,11 @@ export default function SettingsScreen() {
   const [promoEmails, setPromoEmails] = useState(true);
 
   const handleOpenPrivacyPolicy = async () => {
-    await WebBrowser.openBrowserAsync('https://mini-mart.vetristech.com/privacy-policy');
+    await WebBrowser.openBrowserAsync('https://minimart.vetristech.com/privacy-policy');
   };
 
   const handleOpenDeleteAccount = async () => {
-    await WebBrowser.openBrowserAsync('https://mini-mart.vetristech.com/account-deletion');
+    await WebBrowser.openBrowserAsync('https://minimart.vetristech.com/account-deletion');
   };
 
   const SectionHeader = ({ title }: { title: string }) => (
