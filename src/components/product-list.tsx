@@ -14,6 +14,7 @@ import {
   Alert,
   FlatList,
   RefreshControl,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -34,6 +35,8 @@ type Product = {
   price: string;
   category?: { name: string };
   image?: string;
+  whatsapp_number?: string;
+  whatsapp_url?: string;
 };
 
 export interface ProductListRef {
@@ -179,6 +182,28 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
       }
     };
 
+    const handleWhatsAppPress = (product: Product) => {
+      const message = `Hello! I am interested in buying: ${product.name} (₦${parseFloat(product.price).toLocaleString()})`;
+      const encodedMsg = encodeURIComponent(message);
+
+      let url = "";
+      if (product.whatsapp_number) {
+        const cleanNum = product.whatsapp_number.replace(/[^0-9]/g, "");
+        url = `https://wa.me/${cleanNum}?text=${encodedMsg}`;
+      } else if (product.whatsapp_url) {
+        url = product.whatsapp_url.includes("?")
+          ? `${product.whatsapp_url}&text=${encodedMsg}`
+          : `${product.whatsapp_url}?text=${encodedMsg}`;
+      } else {
+        showToast("Merchant WhatsApp number not available", "error");
+        return;
+      }
+
+      Linking.openURL(url).catch(() => {
+        showToast("Could not open WhatsApp", "error");
+      });
+    };
+
     return (
       <FlatList
         data={products}
@@ -309,22 +334,30 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
                 <ThemedText style={styles.productPrice}>
                   ₦{parseFloat(product.price).toLocaleString()}
                 </ThemedText>
-                <TouchableOpacity
-                  style={[
-                    styles.addButton,
-                    {
-                      backgroundColor:
-                        Colors[isDark ? "dark" : "light"].primary,
-                    },
-                  ]}
-                  onPress={() => router.push(`/product/${product.id}` as any)}
-                >
-                  <Ionicons
-                    name="add"
-                    size={18}
-                    color={Colors[isDark ? "dark" : "light"].background}
-                  />
-                </TouchableOpacity>
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity
+                    style={styles.whatsappButton}
+                    onPress={() => handleWhatsAppPress(product)}
+                  >
+                    <Ionicons name="logo-whatsapp" size={17} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.addButton,
+                      {
+                        backgroundColor:
+                          Colors[isDark ? "dark" : "light"].primary,
+                      },
+                    ]}
+                    onPress={() => handleAddToCart(product)}
+                  >
+                    <Ionicons
+                      name="add"
+                      size={18}
+                      color={Colors[isDark ? "dark" : "light"].background}
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </TouchableOpacity>
@@ -381,10 +414,23 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14,
   },
+  actionButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  whatsappButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#25D366",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   addButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },

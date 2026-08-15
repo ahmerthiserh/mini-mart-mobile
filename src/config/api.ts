@@ -1,10 +1,11 @@
-// API Configuration for the application
+// Toggle to true for local testing, or set EXPO_PUBLIC_API_URL in .env
+const USE_LOCAL_API = true;
 
-// If testing on a physical Android device, replace this with your computer's local IP address (e.g., 'http://192.168.1.100:8000/api')
-// If testing on Android Emulator, 'http://10.0.2.2:8000/api' points to your local machine (e.g., your Laravel backend)
-// If testing on iOS Simulator, you can use 'http://localhost:8000/api' or 'http://127.0.0.1:8000/api'
+// Use your computer's local Wi-Fi IP (192.168.1.250) or localhost (when running `adb reverse tcp:8000 tcp:8000`)
+const LOCAL_API_URL = 'http://192.168.1.250:8000/api';
+const PROD_API_URL = 'https://minimart.vetristech.com/api';
 
-export const API_BASE_URL = 'https://minimart.vetristech.com/api';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || (USE_LOCAL_API ? LOCAL_API_URL : PROD_API_URL);
 
 export const API_ENDPOINTS = {
   // Authentication & Profile

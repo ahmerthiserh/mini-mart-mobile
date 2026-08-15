@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, useColorScheme, Dimensions, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, useColorScheme, Dimensions, ActivityIndicator, FlatList, RefreshControl, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -22,6 +22,8 @@ type Product = {
   price: string;
   category?: { name: string };
   image?: string;
+  whatsapp_number?: string;
+  whatsapp_url?: string;
 };
 
 type StoreDetails = {
@@ -32,6 +34,9 @@ type StoreDetails = {
   cover_image?: string;
   location?: string;
   is_verified?: boolean;
+  whatsapp_number?: string;
+  whatsapp_url?: string;
+  phone_number?: string;
 };
 
 export default function StoreCatalogScreen() {
@@ -122,6 +127,28 @@ export default function StoreCatalogScreen() {
     }
   };
 
+  const handleWhatsAppPress = (product: Product) => {
+    const rawNumber = product.whatsapp_number || store?.whatsapp_number || store?.phone_number;
+    const message = `Hello! I am interested in buying: ${product.name} (₦${parseFloat(product.price).toLocaleString()})`;
+    const encodedMsg = encodeURIComponent(message);
+
+    let url = '';
+    if (rawNumber) {
+      const cleanNum = rawNumber.replace(/[^0-9]/g, '');
+      url = `https://wa.me/${cleanNum}?text=${encodedMsg}`;
+    } else if (product.whatsapp_url || store?.whatsapp_url) {
+      const baseUrl = (product.whatsapp_url || store?.whatsapp_url)!;
+      url = baseUrl.includes('?') ? `${baseUrl}&text=${encodedMsg}` : `${baseUrl}?text=${encodedMsg}`;
+    } else {
+      showToast('Merchant WhatsApp number not available', 'error');
+      return;
+    }
+
+    Linking.openURL(url).catch(() => {
+      showToast('Could not open WhatsApp', 'error');
+    });
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchStoreProducts();
@@ -183,12 +210,20 @@ export default function StoreCatalogScreen() {
                 <ThemedText type="default" style={styles.productName} numberOfLines={1}>{product.name}</ThemedText>
                 <View style={styles.productFooter}>
                   <ThemedText style={styles.productPrice}>₦{parseFloat(product.price).toLocaleString()}</ThemedText>
-                  <TouchableOpacity 
-                    style={[styles.addButton, { backgroundColor: Colors[isDark ? 'dark' : 'light'].primary }]}
-                    onPress={() => handleAddToCart(product)}
-                  >
-                    <Ionicons name="add" size={18} color={Colors[isDark ? 'dark' : 'light'].background} />
-                  </TouchableOpacity>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity 
+                      style={styles.whatsappButton}
+                      onPress={() => handleWhatsAppPress(product)}
+                    >
+                      <Ionicons name="logo-whatsapp" size={17} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.addButton, { backgroundColor: Colors[isDark ? 'dark' : 'light'].primary }]}
+                      onPress={() => handleAddToCart(product)}
+                    >
+                      <Ionicons name="add" size={18} color={Colors[isDark ? 'dark' : 'light'].background} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </TouchableOpacity>
@@ -247,10 +282,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  whatsappButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#25D366',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   addButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },

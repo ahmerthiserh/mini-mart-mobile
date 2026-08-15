@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, useColorScheme, Dimensions, ActivityIndicator, TextInput } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, useColorScheme, Dimensions, ActivityIndicator, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -21,6 +21,14 @@ type ProductDetails = {
   price: string;
   category?: { name: string };
   images: string[];
+  whatsapp_number?: string;
+  whatsapp_url?: string;
+  seller?: {
+    store_name?: string;
+    whatsapp_number?: string;
+    phone_number?: string;
+    whatsapp_url?: string;
+  };
 };
 
 export default function ProductDetailsScreen() {
@@ -130,6 +138,31 @@ export default function ProductDetailsScreen() {
     } finally {
       setAddingToCart(false);
     }
+  };
+
+  const handleWhatsAppPress = () => {
+    if (!product) return;
+    const rawNumber = product.whatsapp_number || product.seller?.whatsapp_number || product.seller?.phone_number;
+    const yardsText = quantity > 1 ? ` (${quantity} yards)` : '';
+    const colorText = color.trim() ? ` - Color: ${color.trim()}` : '';
+    const message = `Hello! I am interested in buying: ${product.name}${yardsText}${colorText} for ₦${(parseFloat(product.price) * quantity).toLocaleString()}`;
+    const encodedMsg = encodeURIComponent(message);
+
+    let url = '';
+    if (rawNumber) {
+      const cleanNum = rawNumber.replace(/[^0-9]/g, '');
+      url = `https://wa.me/${cleanNum}?text=${encodedMsg}`;
+    } else if (product.whatsapp_url || product.seller?.whatsapp_url) {
+      const baseUrl = (product.whatsapp_url || product.seller?.whatsapp_url)!;
+      url = baseUrl.includes('?') ? `${baseUrl}&text=${encodedMsg}` : `${baseUrl}?text=${encodedMsg}`;
+    } else {
+      showToast('Merchant WhatsApp contact not available', 'error');
+      return;
+    }
+
+    Linking.openURL(url).catch(() => {
+      showToast('Could not open WhatsApp', 'error');
+    });
   };
 
   const cardBg = isDark ? '#1A1A1A' : '#F8F9FA';
@@ -285,16 +318,25 @@ export default function ProductDetailsScreen() {
             </View>
           </View>
 
-          {/* Add to Cart Button (Full Width) */}
-          <AddToCartButton 
-            onPress={handleAddToCart} 
-            style={{ 
-              marginTop: 32, 
-              backgroundColor: isAdded ? Colors[isDark ? 'dark' : 'light'].success : Colors[isDark ? 'dark' : 'light'].primary 
-            }} 
-            title={addingToCart ? "Adding..." : (isAdded ? "Go to Checkout" : "Add to Cart")}
-            icon={isAdded ? "cart" : "add"}
-          />
+          {/* Action Buttons Row */}
+          <View style={styles.bottomActionRow}>
+            <TouchableOpacity
+              style={styles.whatsappOrderButton}
+              onPress={handleWhatsAppPress}
+            >
+              <Ionicons name="logo-whatsapp" size={22} color="#fff" />
+            </TouchableOpacity>
+
+            <AddToCartButton 
+              onPress={handleAddToCart} 
+              style={{ 
+                flex: 1,
+                backgroundColor: isAdded ? Colors[isDark ? 'dark' : 'light'].success : Colors[isDark ? 'dark' : 'light'].primary 
+              }} 
+              title={addingToCart ? "Adding..." : (isAdded ? "Go to Checkout" : "Add to Cart")}
+              icon={isAdded ? "cart" : "add"}
+            />
+          </View>
         </View>
       </ScrollView>
     </ThemedView>
@@ -450,5 +492,24 @@ const styles = StyleSheet.create({
   totalPrice: {
     fontSize: 20,
     fontWeight: '800',
+  },
+  bottomActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 32,
+  },
+  whatsappOrderButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#25D366',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#25D366',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });
