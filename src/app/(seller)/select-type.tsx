@@ -27,23 +27,24 @@ export type SellerTypeItem = {
 
 // Maps backend Lucide/feather icon names to Ionicons & brand colors
 function mapSellerTypeMeta(slug: string, rawIcon?: string) {
+  const brandColor = "#3B82F6"; // Clean unified primary brand color
   switch (slug) {
     case "physical-business":
     case "physical_business":
-      return { icon: "storefront-outline", color: "#3B82F6", requiresStore: true };
+      return { icon: "storefront-outline", color: brandColor, requiresStore: true };
     case "online-seller":
     case "online_seller":
-      return { icon: "globe-outline", color: "#8B5CF6", requiresStore: false };
+      return { icon: "globe-outline", color: brandColor, requiresStore: false };
     case "whatsapp-seller":
     case "whatsapp_seller":
-      return { icon: "logo-whatsapp", color: "#25D366", requiresStore: false };
+      return { icon: "logo-whatsapp", color: brandColor, requiresStore: false };
     case "digital-marketer":
     case "digital_marketer":
-      return { icon: "share-social-outline", color: "#EC4899", requiresStore: false };
+      return { icon: "share-social-outline", color: brandColor, requiresStore: false };
     case "reseller":
-      return { icon: "repeat-outline", color: "#F59E0B", requiresStore: false };
+      return { icon: "repeat-outline", color: brandColor, requiresStore: false };
     default:
-      return { icon: "business-outline", color: "#64748B", requiresStore: false };
+      return { icon: "business-outline", color: brandColor, requiresStore: false };
   }
 }
 
@@ -121,14 +122,6 @@ export default function SelectSellerTypeScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* TOP HEADER */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color={isDark ? "#FFF" : "#000"} />
-          </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Select Business Type</ThemedText>
-        </View>
-
         <ThemedText style={styles.pageTitle}>How do you sell?</ThemedText>
         <ThemedText style={styles.pageSub}>
           Select your operational model. Available seller types are fetched live from our database.
@@ -183,7 +176,7 @@ export default function SelectSellerTypeScreen() {
             <TouchableOpacity
               style={[
                 styles.primaryBtn,
-                { backgroundColor: selectedType ? selectedType.color : "#9CA3AF" },
+                { backgroundColor: selectedType ? "#3B82F6" : "#9CA3AF" },
                 !selectedType && { opacity: 0.6 },
               ]}
               onPress={handleContinue}
@@ -201,24 +194,21 @@ export default function SelectSellerTypeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40, gap: 14 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 6 },
-  backBtn: { padding: 8, borderRadius: 20, backgroundColor: "#00000010" },
-  headerTitle: { fontSize: 18, fontWeight: "800" },
-  pageTitle: { fontSize: 22, fontWeight: "800", marginTop: 4 },
-  pageSub: { fontSize: 13, opacity: 0.7, lineHeight: 18 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, gap: 16 },
+  pageTitle: { fontSize: 24, fontWeight: "800", marginTop: 4 },
+  pageSub: { fontSize: 14, opacity: 0.7, lineHeight: 20 },
   centerContainer: { paddingVertical: 40, alignItems: "center", justifyContent: "center", gap: 12 },
   loadingText: { fontSize: 13, opacity: 0.7 },
   errorTitle: { fontSize: 16, fontWeight: "800", color: "#EF4444" },
   errorSub: { fontSize: 12, opacity: 0.7, textAlign: "center" },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, backgroundColor: "#3B82F6" },
   retryText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
-  typeList: { gap: 10, marginTop: 4 },
-  typeCard: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 18, borderWidth: 1, gap: 12 },
-  typeIconBg: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },
-  typeTitle: { fontSize: 15, fontWeight: "700" },
-  typeDesc: { fontSize: 11, opacity: 0.7, marginTop: 2 },
+  typeList: { gap: 12, marginTop: 4 },
+  typeCard: { flexDirection: "row", alignItems: "center", padding: 16, borderRadius: 18, borderWidth: 1, gap: 14 },
+  typeIconBg: { width: 46, height: 46, borderRadius: 23, justifyContent: "center", alignItems: "center" },
+  typeTitle: { fontSize: 16, fontWeight: "700" },
+  typeDesc: { fontSize: 12, opacity: 0.7, marginTop: 3, lineHeight: 16 },
   radioCircle: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: "#9CA3AF", justifyContent: "center", alignItems: "center" },
-  primaryBtn: { height: 50, borderRadius: 25, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10 },
-  primaryBtnText: { color: "#FFF", fontWeight: "700", fontSize: 15 },
+  primaryBtn: { height: 52, borderRadius: 26, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 12 },
+  primaryBtnText: { color: "#FFF", fontWeight: "700", fontSize: 16 },
 });

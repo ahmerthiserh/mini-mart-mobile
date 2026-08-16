@@ -98,10 +98,12 @@ export default function RegisterScreen() {
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Full Name</ThemedText>
+              <ThemedText style={styles.label}>
+                Full Name <ThemedText style={styles.requiredAsterisk}>*</ThemedText>
+              </ThemedText>
               <TextInput
                 style={[styles.input, { borderColor, backgroundColor: inputBg, color: isDark ? '#FFF' : '#000' }]}
-                placeholder="Jane Doe"
+                placeholder="e.g. Aminu Kano"
                 placeholderTextColor={isDark ? '#666' : '#999'}
                 value={name}
                 onChangeText={setName}
@@ -109,7 +111,9 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Email Address</ThemedText>
+              <ThemedText style={styles.label}>
+                Email Address <ThemedText style={styles.requiredAsterisk}>*</ThemedText>
+              </ThemedText>
               <TextInput
                 style={[styles.input, { borderColor, backgroundColor: inputBg, color: isDark ? '#FFF' : '#000' }]}
                 placeholder="hello@example.com"
@@ -122,7 +126,9 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Phone Number</ThemedText>
+              <ThemedText style={styles.label}>
+                Phone Number <ThemedText style={styles.requiredAsterisk}>*</ThemedText>
+              </ThemedText>
               <TextInput
                 style={[styles.input, { borderColor, backgroundColor: inputBg, color: isDark ? '#FFF' : '#000' }]}
                 placeholder="+234 800 000 0000"
@@ -135,7 +141,9 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Password</ThemedText>
+              <ThemedText style={styles.label}>
+                Password <ThemedText style={styles.requiredAsterisk}>*</ThemedText>
+              </ThemedText>
               <View style={[styles.passwordContainer, { borderColor, backgroundColor: inputBg }]}>
                 <TextInput
                   style={[styles.passwordInput, { color: isDark ? '#FFF' : '#000' }]}
@@ -152,7 +160,9 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Confirm Password</ThemedText>
+              <ThemedText style={styles.label}>
+                Confirm Password <ThemedText style={styles.requiredAsterisk}>*</ThemedText>
+              </ThemedText>
               <View style={[styles.passwordContainer, { borderColor, backgroundColor: inputBg }]}>
                 <TextInput
                   style={[styles.passwordInput, { color: isDark ? '#FFF' : '#000' }]}
@@ -235,6 +245,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  requiredAsterisk: {
+    color: '#EF4444',
+    fontWeight: '700',
   },
   input: {
     height: 48,

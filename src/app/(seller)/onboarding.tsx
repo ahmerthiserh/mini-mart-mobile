@@ -8,6 +8,8 @@ import {
   useColorScheme,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -17,6 +19,7 @@ import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { WhatsAppAntiScamBanner } from "@/components/whatsapp-anti-scam-banner";
+import api from "@/config/api";
 
 export default function SellerOnboardingScreen() {
   const router = useRouter();
@@ -30,20 +33,26 @@ export default function SellerOnboardingScreen() {
   }>();
 
   const isDark = useColorScheme() === "dark";
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { showToast } = useToast();
 
-  const typeSlug = params.typeSlug || "physical-business";
+  const typeSlug = (params.typeSlug || "physical-business").toLowerCase();
   const typeName = params.typeName || "Physical Business";
   const typeDesc = params.typeDesc || "Database seller model.";
-  const requiresStore = params.requiresStore === "true";
+  const requiresStore = params.requiresStore === "true" || typeSlug.includes("physical");
   const typeColor = params.typeColor || "#3B82F6";
   const typeIcon = params.typeIcon || "storefront-outline";
 
+  // Form Fields
   const [storeName, setStoreName] = useState("");
   const [phone, setPhone] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [address, setAddress] = useState("");
+  const [marketLocation, setMarketLocation] = useState("");
+  const [cacNumber, setCacNumber] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [socialHandle, setSocialHandle] = useState("");
+  const [resellerCategory, setResellerCategory] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -52,23 +61,117 @@ export default function SellerOnboardingScreen() {
   const borderColor = isDark ? "#2C2C2E" : "#EAEAEA";
   const inputBg = isDark ? "#2C2C2E" : "#F8F9FA";
 
+  const isWhatsAppSeller = typeSlug.includes("whatsapp");
+  const isPhysicalSeller = typeSlug.includes("physical");
+  const isOnlineSeller = typeSlug.includes("online");
+  const isDigitalMarketer = typeSlug.includes("digital");
+  const isReseller = typeSlug.includes("reseller");
+
+  React.useEffect(() => {
+    if (token) {
+      fetch(api.ENDPOINTS.VENDOR.STORE, {
+        headers: api.getHeaders(token),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const s = data?.store || data;
+          if (s && s.id && s.store_name) {
+            setStoreName(s.store_name);
+            if (s.phone_number) setPhone(s.phone_number);
+            if (s.whatsapp_number) setWhatsappNumber(s.whatsapp_number);
+            if (s.address) setAddress(s.address);
+            if (s.market) setMarketLocation(s.market);
+            if (s.cac_number || s.business_registration_number) {
+              setCacNumber(s.cac_number || s.business_registration_number);
+            }
+            if (s.website_url) setWebsiteUrl(s.website_url);
+            if (s.social_handle) setSocialHandle(s.social_handle);
+            if (s.description) setDescription(s.description);
+          } else {
+            setStoreName("");
+            setDescription("");
+            setWhatsappNumber("");
+            setAddress("");
+            setMarketLocation("");
+            setCacNumber("");
+            setWebsiteUrl("");
+            setSocialHandle("");
+            setResellerCategory("");
+            if (user?.phone) setPhone(user.phone);
+          }
+        })
+        .catch(() => {
+          setStoreName("");
+          setDescription("");
+          setWhatsappNumber("");
+          setAddress("");
+          setMarketLocation("");
+          setCacNumber("");
+          setWebsiteUrl("");
+          setSocialHandle("");
+          setResellerCategory("");
+          if (user?.phone) setPhone(user.phone);
+        });
+    }
+  }, [token, user]);
+
   const handleSubmit = async () => {
     if (!storeName.trim()) {
-      Alert.alert("Required", "Please enter your store or shop name.");
+      Alert.alert("Required Field", "Please enter your store or profile name.");
       return;
     }
     if (!phone.trim()) {
-      Alert.alert("Required", "Please enter a valid phone number.");
+      Alert.alert("Required Field", "Please enter a valid mobile phone number.");
+      return;
+    }
+    if (isWhatsAppSeller && !whatsappNumber.trim()) {
+      Alert.alert("Required Field", "Please enter your active WhatsApp Business number.");
+      return;
+    }
+    if (isPhysicalSeller && (!address.trim() || !marketLocation.trim())) {
+      Alert.alert("Required Field", "Physical businesses require Market Name and Shop/Suite Number.");
+      return;
+    }
+    if (isDigitalMarketer && !socialHandle.trim()) {
+      Alert.alert("Required Field", "Digital marketers require a social media handle or portfolio link.");
       return;
     }
 
     setLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setSubmitted(true);
-      showToast("Store registration completed successfully!", "success");
+      const payload = {
+        seller_type_slug: typeSlug,
+        store_name: storeName.trim(),
+        phone_number: phone.trim(),
+        whatsapp_number: whatsappNumber.trim() || undefined,
+        address: address.trim() || undefined,
+        market: marketLocation.trim() || undefined,
+        description: description.trim() || undefined,
+      };
+
+      const response = await fetch(api.ENDPOINTS.VENDOR.STORE, {
+        method: "POST",
+        headers: api.getHeaders(token),
+        body: JSON.stringify(payload),
+      });
+
+      const json = await response.json();
+
+      if (response.ok || response.status === 201) {
+        showToast("Store details saved successfully!", "success");
+        router.replace({
+          pathname: "/(seller)/verification",
+          params: {
+            typeSlug,
+            typeName,
+            storeName: storeName.trim(),
+          },
+        });
+      } else {
+        showToast(json.message || "Failed to save store details.", "error");
+      }
     } catch (error) {
-      showToast("Failed to register store. Please try again.", "error");
+      showToast("Network error saving store details.", "error");
     } finally {
       setLoading(false);
     }
@@ -81,7 +184,7 @@ export default function SellerOnboardingScreen() {
           <View style={[styles.successIconBg, { backgroundColor: isDark ? "#1C3A27" : "#E6F4EA" }]}>
             <Ionicons name="checkmark-circle" size={64} color="#10B981" />
           </View>
-          <ThemedText style={styles.successTitle}>Store Registration Complete!</ThemedText>
+          <ThemedText style={styles.successTitle}>Registration Complete!</ThemedText>
           <ThemedText style={styles.successSub}>
             <ThemedText style={{ fontWeight: "700" }}>{storeName}</ThemedText> has been created as a{" "}
             <ThemedText style={{ fontWeight: "700", color: typeColor }}>{typeName}</ThemedText>.
@@ -89,9 +192,14 @@ export default function SellerOnboardingScreen() {
 
           <TouchableOpacity
             style={[styles.primaryBtn, { backgroundColor: "#3B82F6" }]}
-            onPress={() => router.replace("/(seller)/verification")}
+            onPress={() =>
+              router.replace({
+                pathname: "/(seller)/verification",
+                params: { typeSlug, typeName, storeName },
+              })
+            }
           >
-            <ThemedText style={styles.primaryBtnText}>Proceed to Verification Uploads</ThemedText>
+            <ThemedText style={styles.primaryBtnText}>Proceed to Identity & Verification</ThemedText>
             <Ionicons name="shield-checkmark" size={18} color="#FFF" />
           </TouchableOpacity>
         </View>
@@ -101,48 +209,71 @@ export default function SellerOnboardingScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* HEADER */}
-        <View style={styles.topHeader}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color={isDark ? "#FFF" : "#000"} />
-          </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Store Registration</ThemedText>
-        </View>
-
-        {/* SELECTED DATABASE TYPE BADGE */}
-        <View style={[styles.selectedTypePill, { backgroundColor: typeColor + "15", borderColor: typeColor + "40" }]}>
-          <Ionicons name={typeIcon as any} size={18} color={typeColor} />
-          <View style={{ flex: 1 }}>
-            <ThemedText style={[styles.selectedTypeTitle, { color: typeColor }]}>
-              Database Type: {typeName}
-            </ThemedText>
-            <ThemedText style={styles.selectedTypeSub}>{typeDesc}</ThemedText>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* SELECTED DATABASE TYPE BADGE */}
+          <View style={[styles.selectedTypePill, { backgroundColor: typeColor + "15", borderColor: typeColor + "40" }]}>
+            <Ionicons name={typeIcon as any} size={20} color={typeColor} />
+            <View style={{ flex: 1 }}>
+              <ThemedText style={[styles.selectedTypeTitle, { color: typeColor }]}>
+                {typeName} Profile Setup
+              </ThemedText>
+              <ThemedText style={styles.selectedTypeSub}>{typeDesc}</ThemedText>
+            </View>
+            <TouchableOpacity onPress={() => router.back()}>
+              <ThemedText style={[styles.changeText, { color: typeColor }]}>Change</ThemedText>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => router.back()}>
-            <ThemedText style={[styles.changeText, { color: typeColor }]}>Change</ThemedText>
-          </TouchableOpacity>
-        </View>
 
-        {(typeSlug.includes("whatsapp")) && (
+        {isWhatsAppSeller && (
           <WhatsAppAntiScamBanner storeName={storeName || "your WhatsApp store"} />
         )}
 
-        {/* FORM CARD */}
+        {/* DYNAMIC FORM CARD BASED ON SELLER TYPE */}
         <View style={[styles.formCard, { backgroundColor: cardBg, borderColor }]}>
+          
+          {/* COMMON: STORE / BRAND NAME */}
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.inputLabel}>Store / Shop Name *</ThemedText>
+            <ThemedText style={styles.inputLabel}>
+              {isPhysicalSeller
+                ? "Store / Shop Name"
+                : isWhatsAppSeller
+                ? "WhatsApp Store / Group Name"
+                : isDigitalMarketer
+                ? "Brand / Agency Name"
+                : isReseller
+                ? "Reseller Business Name"
+                : "Store / Brand Name"}{" "}
+              <ThemedText style={styles.requiredStar}>*</ThemedText>
+            </ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-              placeholder="e.g. Metro Supermarket or Fashion Hub"
+              placeholder={
+                isPhysicalSeller
+                  ? "e.g. Metro Supermarket or Fashion Hub"
+                  : isWhatsAppSeller
+                  ? "e.g. Kano Wholesale Group"
+                  : "e.g. Ahmad Digital Deals"
+              }
               placeholderTextColor={isDark ? "#8E8E93" : "#999"}
               value={storeName}
               onChangeText={setStoreName}
             />
           </View>
 
+          {/* COMMON: MOBILE PHONE NUMBER */}
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.inputLabel}>Mobile Phone Number *</ThemedText>
+            <ThemedText style={styles.inputLabel}>
+              Mobile Phone Number <ThemedText style={styles.requiredStar}>*</ThemedText>
+            </ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
               placeholder="e.g. +234 800 123 4567"
@@ -153,38 +284,124 @@ export default function SellerOnboardingScreen() {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.inputLabel}>
-              WhatsApp Number {typeSlug.includes("whatsapp") ? "*" : "(Optional)"}
-            </ThemedText>
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-              placeholder="e.g. +234 800 123 4567"
-              placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-              keyboardType="phone-pad"
-              value={whatsappNumber}
-              onChangeText={setWhatsappNumber}
-            />
-          </View>
-
-          {requiresStore && (
+          {/* WHATSAPP SELLER SPECIFIC */}
+          {isWhatsAppSeller && (
             <View style={styles.inputGroup}>
-              <ThemedText style={styles.inputLabel}>Physical Shop Address & Market/Shop No. *</ThemedText>
+              <ThemedText style={styles.inputLabel}>
+                Active WhatsApp Business Number <ThemedText style={styles.requiredStar}>*</ThemedText>
+              </ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-                placeholder="e.g. Shop 14, Central Plaza, Main Market"
+                placeholder="e.g. +234 800 987 6543"
                 placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-                value={address}
-                onChangeText={setAddress}
+                keyboardType="phone-pad"
+                value={whatsappNumber}
+                onChangeText={setWhatsappNumber}
               />
             </View>
           )}
 
+          {/* PHYSICAL BUSINESS SPECIFIC */}
+          {isPhysicalSeller && (
+            <>
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.inputLabel}>
+                  Market / Shopping Plaza Name <ThemedText style={styles.requiredStar}>*</ThemedText>
+                </ThemedText>
+                <TextInput
+                  style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
+                  placeholder="e.g. Sabon Gari Market, Kano"
+                  placeholderTextColor={isDark ? "#8E8E93" : "#999"}
+                  value={marketLocation}
+                  onChangeText={setMarketLocation}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.inputLabel}>
+                  Shop / Suite Number & Line <ThemedText style={styles.requiredStar}>*</ThemedText>
+                </ThemedText>
+                <TextInput
+                  style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
+                  placeholder="e.g. Shop B14, Line 4, 2nd Floor"
+                  placeholderTextColor={isDark ? "#8E8E93" : "#999"}
+                  value={address}
+                  onChangeText={setAddress}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.inputLabel}>
+                  CAC / Business Registration Number (Optional)
+                </ThemedText>
+                <TextInput
+                  style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
+                  placeholder="e.g. RC 1234567"
+                  placeholderTextColor={isDark ? "#8E8E93" : "#999"}
+                  value={cacNumber}
+                  onChangeText={setCacNumber}
+                />
+              </View>
+            </>
+          )}
+
+          {/* ONLINE SELLER SPECIFIC */}
+          {isOnlineSeller && (
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>
+                Website or Online Store Link (Optional)
+              </ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
+                placeholder="e.g. https://myfashionstore.com"
+                placeholderTextColor={isDark ? "#8E8E93" : "#999"}
+                autoCapitalize="none"
+                keyboardType="url"
+                value={websiteUrl}
+                onChangeText={setWebsiteUrl}
+              />
+            </View>
+          )}
+
+          {/* DIGITAL MARKETER SPECIFIC */}
+          {isDigitalMarketer && (
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>
+                Social Media / Portfolio Handle <ThemedText style={styles.requiredStar}>*</ThemedText>
+              </ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
+                placeholder="e.g. @ahmad_deals or instagram.com/brand"
+                placeholderTextColor={isDark ? "#8E8E93" : "#999"}
+                autoCapitalize="none"
+                value={socialHandle}
+                onChangeText={setSocialHandle}
+              />
+            </View>
+          )}
+
+          {/* RESELLER SPECIFIC */}
+          {isReseller && (
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>
+                Primary Sourcing Category <ThemedText style={styles.requiredStar}>*</ThemedText>
+              </ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
+                placeholder="e.g. Electronics, Sneakers, Fashion, Cosmetics"
+                placeholderTextColor={isDark ? "#8E8E93" : "#999"}
+                value={resellerCategory}
+                onChangeText={setResellerCategory}
+              />
+            </View>
+          )}
+
+          {/* COMMON: STORE BIO / DESCRIPTION */}
           <View style={styles.inputGroup}>
-            <ThemedText style={styles.inputLabel}>Store Bio / Description</ThemedText>
+            <ThemedText style={styles.inputLabel}>Store Bio & Product Offerings</ThemedText>
             <TextInput
               style={[styles.input, styles.textArea, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-              placeholder="Tell buyers what products you offer..."
+              placeholder="Tell buyers about your products and services..."
               placeholderTextColor={isDark ? "#8E8E93" : "#999"}
               multiline
               numberOfLines={3}
@@ -202,37 +419,36 @@ export default function SellerOnboardingScreen() {
               <ActivityIndicator color="#FFF" />
             ) : (
               <>
-                <Ionicons name="rocket-outline" size={18} color="#FFF" />
-                <ThemedText style={styles.primaryBtnText}>Register Store & Proceed</ThemedText>
+                <Ionicons name="arrow-forward" size={18} color="#FFF" />
+                <ThemedText style={styles.primaryBtnText}>Save & Continue to Verification</ThemedText>
               </>
             )}
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40, gap: 14 },
-  topHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 6 },
-  backBtn: { padding: 8, borderRadius: 20, backgroundColor: "#00000010" },
-  headerTitle: { fontSize: 18, fontWeight: "800" },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 160, gap: 16 },
   selectedTypePill: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
+    padding: 14,
     borderRadius: 16,
     borderWidth: 1,
-    gap: 10,
+    gap: 12,
   },
-  selectedTypeTitle: { fontSize: 13, fontWeight: "800" },
-  selectedTypeSub: { fontSize: 11, opacity: 0.7, marginTop: 1 },
+  selectedTypeTitle: { fontSize: 14, fontWeight: "800" },
+  selectedTypeSub: { fontSize: 11, opacity: 0.7, marginTop: 2 },
   changeText: { fontSize: 12, fontWeight: "700" },
   formCard: { padding: 16, borderRadius: 20, borderWidth: 1, gap: 14 },
   inputGroup: { gap: 6 },
   inputLabel: { fontSize: 13, fontWeight: "600" },
+  requiredStar: { color: "#EF4444", fontWeight: "800" },
   input: { height: 46, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 14 },
   textArea: { height: 80, paddingTop: 12, textAlignVertical: "top" },
   primaryBtn: { height: 50, borderRadius: 25, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 8 },

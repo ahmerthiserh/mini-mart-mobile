@@ -22,7 +22,7 @@ export const API_ENDPOINTS = {
   PRODUCT_DETAILS: (id: string | number) => `${API_BASE_URL}/products/${id}`,
   PRODUCT_REVIEWS: (id: string | number) => `${API_BASE_URL}/products/${id}/reviews`,
   ADD_REVIEW: (id: string | number) => `${API_BASE_URL}/products/${id}/reviews`,
-  
+
   // Stores & Vendors Directory
   STORES: `${API_BASE_URL}/stores`,
   STORE_DETAILS: (id: string | number) => `${API_BASE_URL}/stores/${id}`,
@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
     SUBSCRIPTION_PLANS: `${API_BASE_URL}/vendor/subscriptions/plans`,
     MY_SUBSCRIPTION: `${API_BASE_URL}/vendor/subscriptions/my-subscription`,
     SUBSCRIBE: `${API_BASE_URL}/vendor/subscriptions/subscribe`,
+    VERIFICATIONS: `${API_BASE_URL}/vendor/verifications`,
   },
 
   // Admin Mobile Endpoints

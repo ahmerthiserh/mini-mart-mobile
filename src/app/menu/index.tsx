@@ -17,6 +17,7 @@ import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { Colors } from "@/constants/Colors";
+import api from "@/config/api";
 
 import { MenuHeader } from "@/components/menu/menu-header";
 import { SellerCtaCard } from "@/components/menu/seller-cta-card";
@@ -85,6 +86,30 @@ export default function MenuScreen() {
 
   const { user, token, logout } = useAuth();
   const isLoggedIn = !!token;
+  const [storeData, setStoreData] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    if (isLoggedIn && token) {
+      setStoreData(null);
+      fetch(api.ENDPOINTS.VENDOR.STORE, {
+        headers: api.getHeaders(token),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.id) {
+            setStoreData(data);
+          } else {
+            setStoreData(null);
+          }
+        })
+        .catch(() => setStoreData(null));
+    } else {
+      setStoreData(null);
+    }
+  }, [isLoggedIn, token]);
+
+  const hasStore = !!(storeData && storeData.id);
+  const storeName = storeData?.store_name;
 
   const getInitials = (name: string) => {
     return name
@@ -151,11 +176,27 @@ export default function MenuScreen() {
           onProfilePress={() => router.push("/(settings)/personal-info")}
         />
 
-        {/* BECOME A SELLER CTA FOR LOGGED IN USERS */}
+        {/* BECOME OR UPDATE SELLER CTA FOR LOGGED IN USERS */}
         {isLoggedIn && (
           <SellerCtaCard
             isDark={isDark}
-            onPress={() => router.push("/(seller)/select-type" as any)}
+            hasStore={hasStore}
+            storeName={storeName}
+            onPress={() => {
+              if (hasStore) {
+                const slug = storeData?.seller_type_slug || "physical-business";
+                const name = storeData?.seller_type_name || "Physical Business";
+                router.push({
+                  pathname: "/(seller)/onboarding",
+                  params: {
+                    typeSlug: slug,
+                    typeName: name,
+                  },
+                } as any);
+              } else {
+                router.push("/(seller)/select-type" as any);
+              }
+            }}
           />
         )}
 

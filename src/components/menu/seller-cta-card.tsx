@@ -5,10 +5,12 @@ import { ThemedText } from "@/components/themed-text";
 
 type SellerCtaCardProps = {
   isDark: boolean;
+  hasStore?: boolean;
+  storeName?: string;
   onPress: () => void;
 };
 
-export function SellerCtaCard({ isDark, onPress }: SellerCtaCardProps) {
+export function SellerCtaCard({ isDark, hasStore, storeName, onPress }: SellerCtaCardProps) {
   return (
     <TouchableOpacity
       style={[
@@ -22,12 +24,18 @@ export function SellerCtaCard({ isDark, onPress }: SellerCtaCardProps) {
     >
       <View style={styles.sellerCtaContent}>
         <View style={[styles.sellerIconBg, { backgroundColor: "#3B82F6" }]}>
-          <Ionicons name="storefront" size={20} color="#FFF" />
+          <Ionicons name={hasStore ? "create-outline" : "storefront"} size={20} color="#FFF" />
         </View>
         <View style={styles.sellerCtaTextContainer}>
-          <ThemedText style={styles.sellerCtaTitle}>Open a Store or Shop</ThemedText>
+          <ThemedText style={styles.sellerCtaTitle}>
+            {hasStore ? "Update Store & Business Profile" : "Open a Store or Shop"}
+          </ThemedText>
           <ThemedText style={styles.sellerCtaSub}>
-            For physical stores, supermarkets & local sellers
+            {hasStore
+              ? storeName
+                ? `${storeName} • Tap to edit location & details`
+                : "Manage & update your shop location and business details"
+              : "For physical stores, supermarkets & local sellers"}
           </ThemedText>
         </View>
         <Ionicons name="arrow-forward-circle" size={24} color="#3B82F6" />
