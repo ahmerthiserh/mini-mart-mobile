@@ -8,11 +8,12 @@ type SellerCtaCardProps = {
   hasStore?: boolean;
   storeName?: string;
   onPress: () => void;
+  onVerificationPress?: () => void;
 };
 
-export function SellerCtaCard({ isDark, hasStore, storeName, onPress }: SellerCtaCardProps) {
+export function SellerCtaCard({ isDark, hasStore, storeName, onPress, onVerificationPress }: SellerCtaCardProps) {
   return (
-    <TouchableOpacity
+    <View
       style={[
         styles.sellerCtaCard,
         {
@@ -20,27 +21,36 @@ export function SellerCtaCard({ isDark, hasStore, storeName, onPress }: SellerCt
           borderColor: isDark ? "#2C3E50" : "#D0E7FF",
         },
       ]}
-      onPress={onPress}
     >
-      <View style={styles.sellerCtaContent}>
+      <TouchableOpacity style={styles.sellerCtaContent} onPress={onPress}>
         <View style={[styles.sellerIconBg, { backgroundColor: "#3B82F6" }]}>
-          <Ionicons name={hasStore ? "create-outline" : "storefront"} size={20} color="#FFF" />
+          <Ionicons name={hasStore ? "storefront-outline" : "storefront"} size={20} color="#FFF" />
         </View>
         <View style={styles.sellerCtaTextContainer}>
           <ThemedText style={styles.sellerCtaTitle}>
-            {hasStore ? "Update Store & Business Profile" : "Open a Store or Shop"}
+            {hasStore ? (storeName ? storeName : "Your Store Profile") : "Open a Store or Shop"}
           </ThemedText>
           <ThemedText style={styles.sellerCtaSub}>
             {hasStore
-              ? storeName
-                ? `${storeName} • Tap to edit location & details`
-                : "Manage & update your shop location and business details"
+              ? "Tap to edit shop location & business details"
               : "For physical stores, supermarkets & local sellers"}
           </ThemedText>
         </View>
-        <Ionicons name="arrow-forward-circle" size={24} color="#3B82F6" />
-      </View>
-    </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={20} color="#3B82F6" />
+      </TouchableOpacity>
+
+      {hasStore && onVerificationPress && (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.verificationBtn, { backgroundColor: "#3B82F6" }]}
+            onPress={onVerificationPress}
+          >
+            <Ionicons name="shield-checkmark-outline" size={16} color="#FFF" />
+            <ThemedText style={styles.verificationBtnText}>Continue Store Verification</ThemedText>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -75,5 +85,25 @@ const styles = StyleSheet.create({
   sellerCtaSub: {
     fontSize: 12,
     opacity: 0.7,
+  },
+  actionRow: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(140, 140, 140, 0.25)",
+  },
+  verificationBtn: {
+    height: 38,
+    borderRadius: 19,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  verificationBtnText: {
+    color: "#FFF",
+    fontWeight: "700",
+    fontSize: 13,
   },
 });

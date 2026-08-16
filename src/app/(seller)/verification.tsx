@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -22,6 +23,10 @@ import { VerificationBadges, BadgeType } from "@/components/verification-badges"
 import api from "@/config/api";
 
 const PRIMARY_COLOR = "#3B82F6";
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const YEARS = Array.from({ length: 70 }, (_, i) => 2010 - i);
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 const ACTION_LEVELS = [
   {
@@ -81,6 +86,17 @@ export default function SellerVerificationScreen() {
   const [fullName, setFullName] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [dob, setDob] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(2000);
+  const [selectedMonth, setSelectedMonth] = useState(1);
+  const [selectedDay, setSelectedDay] = useState(15);
+
+  const handleConfirmDob = () => {
+    const formattedDay = String(selectedDay).padStart(2, "0");
+    const formattedMonth = String(selectedMonth).padStart(2, "0");
+    setDob(`${formattedDay} / ${formattedMonth} / ${selectedYear}`);
+    setShowDatePicker(false);
+  };
   const [businessName, setBusinessName] = useState("");
   const [businessNo, setBusinessNo] = useState("");
   const [shopAddress, setShopAddress] = useState("");
@@ -298,14 +314,28 @@ export default function SellerVerificationScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <ThemedText style={styles.inputLabel}>Date of Birth</ThemedText>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-                    placeholder="DD / MM / YYYY"
-                    placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-                    value={dob}
-                    onChangeText={setDob}
-                  />
+                  <ThemedText style={styles.inputLabel}>
+                    Date of Birth <ThemedText style={styles.requiredStar}>*</ThemedText>
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={[
+                      styles.input,
+                      { backgroundColor: inputBg, borderColor, justifyContent: "center" },
+                    ]}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                      <ThemedText
+                        style={{
+                          color: dob ? (isDark ? "#FFF" : "#000") : isDark ? "#8E8E93" : "#999",
+                          fontSize: 14,
+                        }}
+                      >
+                        {dob || "Select Date of Birth (DD / MM / YYYY)"}
+                      </ThemedText>
+                      <Ionicons name="calendar-outline" size={18} color={PRIMARY_COLOR} />
+                    </View>
+                  </TouchableOpacity>
                 </View>
               </>
             )}
@@ -442,6 +472,80 @@ export default function SellerVerificationScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* DATE OF BIRTH SELECTOR MODAL */}
+      <Modal visible={showDatePicker} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: cardBg, borderColor }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Select Date of Birth</ThemedText>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Ionicons name="close" size={22} color={isDark ? "#FFF" : "#000"} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.pickerRow}>
+              {/* DAY COLUMN */}
+              <View style={styles.pickerCol}>
+                <ThemedText style={styles.pickerColLabel}>Day</ThemedText>
+                <ScrollView style={styles.scrollCol} showsVerticalScrollIndicator={false}>
+                  {DAYS.map((d) => (
+                    <TouchableOpacity
+                      key={d}
+                      style={[styles.pickerItem, selectedDay === d && { backgroundColor: PRIMARY_COLOR + "20" }]}
+                      onPress={() => setSelectedDay(d)}
+                    >
+                      <ThemedText style={[styles.pickerItemText, selectedDay === d && { color: PRIMARY_COLOR, fontWeight: "800" }]}>
+                        {String(d).padStart(2, "0")}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* MONTH COLUMN */}
+              <View style={styles.pickerCol}>
+                <ThemedText style={styles.pickerColLabel}>Month</ThemedText>
+                <ScrollView style={styles.scrollCol} showsVerticalScrollIndicator={false}>
+                  {MONTHS.map((m, idx) => (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.pickerItem, selectedMonth === idx + 1 && { backgroundColor: PRIMARY_COLOR + "20" }]}
+                      onPress={() => setSelectedMonth(idx + 1)}
+                    >
+                      <ThemedText style={[styles.pickerItemText, selectedMonth === idx + 1 && { color: PRIMARY_COLOR, fontWeight: "800" }]}>
+                        {m}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* YEAR COLUMN */}
+              <View style={styles.pickerCol}>
+                <ThemedText style={styles.pickerColLabel}>Year</ThemedText>
+                <ScrollView style={styles.scrollCol} showsVerticalScrollIndicator={false}>
+                  {YEARS.map((y) => (
+                    <TouchableOpacity
+                      key={y}
+                      style={[styles.pickerItem, selectedYear === y && { backgroundColor: PRIMARY_COLOR + "20" }]}
+                      onPress={() => setSelectedYear(y)}
+                    >
+                      <ThemedText style={[styles.pickerItemText, selectedYear === y && { color: PRIMARY_COLOR, fontWeight: "800" }]}>
+                        {y}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            <TouchableOpacity style={[styles.submitBtn, { backgroundColor: PRIMARY_COLOR, marginTop: 10 }]} onPress={handleConfirmDob}>
+              <ThemedText style={styles.submitBtnText}>Confirm Date of Birth</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -506,4 +610,14 @@ const styles = StyleSheet.create({
   autoTitle: { fontSize: 12, fontWeight: "700" },
   autoSub: { fontSize: 11, opacity: 0.6 },
   divider: { height: StyleSheet.hairlineWidth, width: "100%" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+  modalCard: { padding: 18, borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, gap: 10 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  modalTitle: { fontSize: 16, fontWeight: "800" },
+  pickerRow: { flexDirection: "row", gap: 10, height: 180, marginTop: 6 },
+  pickerCol: { flex: 1, gap: 6 },
+  pickerColLabel: { fontSize: 11, fontWeight: "700", textAlign: "center", opacity: 0.6, textTransform: "uppercase" },
+  scrollCol: { flex: 1, borderRadius: 12, borderWidth: 1, borderColor: "rgba(140, 140, 140, 0.2)" },
+  pickerItem: { paddingVertical: 8, alignItems: "center", justifyContent: "center", borderRadius: 8 },
+  pickerItemText: { fontSize: 13, fontWeight: "600" },
 });

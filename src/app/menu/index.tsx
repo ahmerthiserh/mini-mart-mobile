@@ -197,6 +197,18 @@ export default function MenuScreen() {
                 router.push("/(seller)/select-type" as any);
               }
             }}
+            onVerificationPress={() => {
+              const slug = storeData?.seller_type_slug || "physical-business";
+              const name = storeData?.seller_type_name || "Physical Business";
+              router.push({
+                pathname: "/(seller)/verification",
+                params: {
+                  typeSlug: slug,
+                  typeName: name,
+                  storeName: storeName || "Your Store",
+                },
+              } as any);
+            }}
           />
         )}
 
