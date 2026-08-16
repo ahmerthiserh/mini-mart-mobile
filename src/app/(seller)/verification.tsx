@@ -8,6 +8,8 @@ import {
   useColorScheme,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -19,56 +21,44 @@ import { useToast } from "@/context/ToastContext";
 import { VerificationBadges, BadgeType } from "@/components/verification-badges";
 import api from "@/config/api";
 
-const VERIFICATION_LEVELS = [
-  {
-    id: "account",
-    levelNum: 0,
-    title: "Level 0 — Account Verified",
-    badge: "phone_verified",
-    icon: "checkmark-done-circle-outline",
-    color: "#10B981",
-    desc: "Email address & Phone/OTP number verification.",
-    requirementText: "Automated upon account creation.",
-  },
+const PRIMARY_COLOR = "#3B82F6";
+
+const ACTION_LEVELS = [
   {
     id: "identity",
     levelNum: 1,
-    title: "Level 1 — Identity Verified (Mandatory)",
+    title: "Identity",
+    subtitle: "Level 1 • Person",
     badge: "identity_verified",
-    icon: "person-checkmark-outline",
-    color: "#3B82F6",
-    desc: "Verifies the PERSON operating the store (NIN, Driver's License, Passport, or Selfie).",
-    requirementText: "Required for all sellers (Physical, Online/WhatsApp & Digital Marketers).",
+    icon: "id-card-outline",
+    color: PRIMARY_COLOR,
+    tag: "Mandatory",
+    desc: "Verifies the person operating the store (NIN, Passport, or Driver's License).",
+    requirementText: "Required for all sellers.",
   },
   {
     id: "business",
     levelNum: 2,
-    title: "Level 2 — Business Verified",
+    title: "Business",
+    subtitle: "Level 2 • CAC",
     badge: "business_verified",
-    icon: "briefcase-outline",
-    color: "#8B5CF6",
-    desc: "Verifies the REGISTERED BUSINESS (CAC Certificate & Registration Number).",
-    requirementText: "For registered businesses. Informal market sellers can remain Identity Verified.",
+    icon: "business-outline",
+    color: PRIMARY_COLOR,
+    tag: "Optional",
+    desc: "Verifies the registered business entity (CAC Certificate & Registration Number).",
+    requirementText: "For registered business entities.",
   },
   {
     id: "physical_store",
     levelNum: 3,
-    title: "Level 3 — Store Verified",
+    title: "Store",
+    subtitle: "Level 3 • Location",
     badge: "store_verified",
-    icon: "storefront-outline",
-    color: "#F59E0B",
-    desc: "Verifies the PHYSICAL LOCATION (Shop address, shop number, storefront & interior photo).",
-    requirementText: "For physical market shops & supermarkets. Not required for Online/WhatsApp sellers.",
-  },
-  {
-    id: "trusted_seller",
-    levelNum: 4,
-    title: "Level 4 — Trusted Seller",
-    badge: "trusted_seller",
-    icon: "star-outline",
-    color: "#EC4899",
-    desc: "Earned badge based on account age, successful orders, low complaint rate, and customer ratings.",
-    requirementText: "Earned automatically through activity. Cannot be purchased.",
+    icon: "location-outline",
+    color: PRIMARY_COLOR,
+    tag: "Physical Shop",
+    desc: "Verifies the physical market location (Shop address, suite number & storefront photo).",
+    requirementText: "For physical market shops & supermarkets.",
   },
 ];
 
@@ -84,11 +74,10 @@ export default function SellerVerificationScreen() {
   const { user, token } = useAuth();
   const { showToast } = useToast();
 
-  const typeSlug = (params.typeSlug || "").toLowerCase();
-  const typeName = params.typeName || "";
   const storeName = params.storeName || user?.name || "Your Store";
 
   const [activeLevel, setActiveLevel] = useState("identity");
+  const [showInfo, setShowInfo] = useState(false);
   const [fullName, setFullName] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [dob, setDob] = useState("");
@@ -103,25 +92,27 @@ export default function SellerVerificationScreen() {
   const borderColor = isDark ? "#2C2C2E" : "#EAEAEA";
   const inputBg = isDark ? "#2C2C2E" : "#F8F9FA";
 
+  const currentLevelObj = ACTION_LEVELS.find((l) => l.id === activeLevel) || ACTION_LEVELS[0];
+
   const handleSubmitVerification = async () => {
     if (activeLevel === "identity") {
       if (!fullName.trim()) {
-        Alert.alert("Required", "Please enter your full legal name as shown on your ID.");
+        Alert.alert("Required Field", "Please enter your full legal name as shown on your ID.");
         return;
       }
       if (!idNumber.trim()) {
-        Alert.alert("Required", "Please enter your Government ID / NIN number.");
+        Alert.alert("Required Field", "Please enter your Government ID / NIN number.");
         return;
       }
     }
 
     if (activeLevel === "business" && (!businessName.trim() || !businessNo.trim())) {
-      Alert.alert("Required", "Please enter your registered business name and CAC number.");
+      Alert.alert("Required Field", "Please enter your registered business name and CAC number.");
       return;
     }
 
     if (activeLevel === "physical_store" && (!shopAddress.trim() || !shopNo.trim())) {
-      Alert.alert("Required", "Please enter your physical shop address and shop number.");
+      Alert.alert("Required Field", "Please enter your physical shop address and shop number.");
       return;
     }
 
@@ -147,7 +138,7 @@ export default function SellerVerificationScreen() {
       const json = await response.json();
 
       if (response.ok || response.status === 201) {
-        showToast("Verification request submitted & saved to database!", "success");
+        showToast("Verification request submitted & saved!", "success");
 
         if (activeLevel === "identity" && !myBadges.includes("identity_verified")) {
           setMyBadges([...myBadges, "identity_verified"]);
@@ -168,85 +159,114 @@ export default function SellerVerificationScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* ACTIVE BADGES */}
-        <View style={[styles.badgesCard, { backgroundColor: cardBg, borderColor }]}>
-          <ThemedText style={styles.cardTitle}>Your Verification Badges</ThemedText>
-          <VerificationBadges badges={myBadges} sellerName={storeName} />
-        </View>
-
-        {/* 3-TIER DISTINCTION EXPLANATION CARD */}
-        <View style={[styles.distinctionCard, { backgroundColor: cardBg, borderColor }]}>
-          <View style={styles.distinctionHeader}>
-            <Ionicons name="shield-checkmark-outline" size={22} color="#3B82F6" />
-            <ThemedText style={styles.distinctionTitle}>3 Verification Pillars</ThemedText>
-          </View>
-          <ThemedText style={styles.distinctionSub}>
-            Mini Mart verifies the <ThemedText style={{ fontWeight: "800", color: "#3B82F6" }}>Person</ThemedText>, the <ThemedText style={{ fontWeight: "800", color: "#8B5CF6" }}>Business</ThemedText>, and the <ThemedText style={{ fontWeight: "800", color: "#F59E0B" }}>Location</ThemedText> separately:
-          </ThemedText>
-          <View style={styles.pillarList}>
-            <ThemedText style={styles.pillarItem}>
-              👤 <ThemedText style={{ fontWeight: "700" }}>Identity Verification:</ThemedText> Verifies the PERSON (NIN/Passport/ID). Required for all sellers.
-            </ThemedText>
-            <ThemedText style={styles.pillarItem}>
-              🏢 <ThemedText style={{ fontWeight: "700" }}>Business Verification:</ThemedText> Verifies the CAC BUSINESS (Optional for informal sellers).
-            </ThemedText>
-            <ThemedText style={styles.pillarItem}>
-              📍 <ThemedText style={{ fontWeight: "700" }}>Store Verification:</ThemedText> Verifies PHYSICAL SHOPS (Not required for Online/WhatsApp sellers).
-            </ThemedText>
-          </View>
-        </View>
-
-        {/* LEVEL SELECTOR */}
-        <ThemedText style={[styles.sectionLabel, { color: isDark ? "#8E8E93" : "#6C6C70" }]}>
-          SELLER VERIFICATION LEVELS (0 – 4)
-        </ThemedText>
-
-        <View style={styles.levelList}>
-          {VERIFICATION_LEVELS.map((lvl) => {
-            const isSelected = activeLevel === lvl.id;
-            const isUnlocked = myBadges.includes(lvl.badge as BadgeType);
-
-            return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+      >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          
+          {/* HEADER & BADGES CARD */}
+          <View style={[styles.headerCard, { backgroundColor: cardBg, borderColor }]}>
+            <View style={styles.headerTop}>
+              <View>
+                <ThemedText style={styles.headerTitle}>{storeName}</ThemedText>
+                <ThemedText style={styles.headerSub}>Store Verification & Security Center</ThemedText>
+              </View>
               <TouchableOpacity
-                key={lvl.id}
-                style={[
-                  styles.levelCard,
-                  { backgroundColor: cardBg, borderColor },
-                  isSelected && { borderColor: lvl.color, borderWidth: 2 },
-                ]}
-                onPress={() => {
-                  if (lvl.id !== "account" && lvl.id !== "trusted_seller") {
-                    setActiveLevel(lvl.id);
-                  }
-                }}
+                onPress={() => setShowInfo(!showInfo)}
+                style={[styles.infoToggleBtn, { backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7" }]}
               >
-                <View style={styles.levelHeader}>
-                  <View style={[styles.iconBg, { backgroundColor: lvl.color + "18" }]}>
-                    <Ionicons name={lvl.icon as any} size={22} color={lvl.color} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={styles.levelTitle}>{lvl.title}</ThemedText>
-                    <ThemedText style={styles.levelDesc}>{lvl.desc}</ThemedText>
-                    <ThemedText style={[styles.levelReq, { color: lvl.color }]}>{lvl.requirementText}</ThemedText>
-                  </View>
-                  {isUnlocked && (
-                    <View style={styles.unlockedTag}>
-                      <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                    </View>
-                  )}
-                </View>
+                <Ionicons name={showInfo ? "close" : "information-circle-outline"} size={16} color="#3B82F6" />
               </TouchableOpacity>
-            );
-          })}
-        </View>
+            </View>
 
-        {/* SUBMISSION FORM */}
-        {(activeLevel === "identity" || activeLevel === "business" || activeLevel === "physical_store") && (
-          <View style={[styles.formCard, { backgroundColor: cardBg, borderColor }]}>
-            <ThemedText style={styles.cardTitle}>
-              Submit {activeLevel === "identity" ? "Identity" : activeLevel === "business" ? "Business" : "Store"} Verification
-            </ThemedText>
+            <VerificationBadges badges={myBadges} sellerName={storeName} />
+
+            {/* COLLAPSIBLE PILLARS EXPLANATION */}
+            {showInfo && (
+              <View style={[styles.infoDrawer, { backgroundColor: isDark ? "#252528" : "#F8FAFC", borderColor }]}>
+                <ThemedText style={styles.infoDrawerTitle}>3 Verification Pillars</ThemedText>
+                <View style={styles.pillarList}>
+                  <View style={styles.pillarRow}>
+                    <Ionicons name="id-card-outline" size={14} color={PRIMARY_COLOR} />
+                    <ThemedText style={styles.pillarItem}>
+                      <ThemedText style={{ fontWeight: "700" }}>Identity:</ThemedText> Verifies the person (NIN/Passport). Required for all sellers.
+                    </ThemedText>
+                  </View>
+                  <View style={styles.pillarRow}>
+                    <Ionicons name="business-outline" size={14} color={PRIMARY_COLOR} />
+                    <ThemedText style={styles.pillarItem}>
+                      <ThemedText style={{ fontWeight: "700" }}>Business:</ThemedText> Verifies CAC business registration (Optional for informal sellers).
+                    </ThemedText>
+                  </View>
+                  <View style={styles.pillarRow}>
+                    <Ionicons name="location-outline" size={14} color={PRIMARY_COLOR} />
+                    <ThemedText style={styles.pillarItem}>
+                      <ThemedText style={{ fontWeight: "700" }}>Store:</ThemedText> Verifies physical shop address & location.
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* ACTION LEVEL TABS */}
+          <ThemedText style={[styles.sectionLabel, { color: isDark ? "#8E8E93" : "#6C6C70" }]}>
+            SELECT VERIFICATION TIER
+          </ThemedText>
+
+          <View style={styles.tabRow}>
+            {ACTION_LEVELS.map((lvl) => {
+              const isSelected = activeLevel === lvl.id;
+              const isVerified = myBadges.includes(lvl.badge as BadgeType);
+
+              return (
+                <TouchableOpacity
+                  key={lvl.id}
+                  style={[
+                    styles.tabChip,
+                    { backgroundColor: cardBg, borderColor },
+                    isSelected && { borderColor: lvl.color, backgroundColor: lvl.color + "15", borderWidth: 2 },
+                  ]}
+                  onPress={() => setActiveLevel(lvl.id)}
+                >
+                  <View style={[styles.tabIconBg, { backgroundColor: lvl.color + "20" }]}>
+                    <Ionicons name={lvl.icon as any} size={16} color={lvl.color} />
+                  </View>
+                  <View style={styles.tabTextCol}>
+                    <ThemedText
+                      numberOfLines={1}
+                      style={[styles.tabTitle, isSelected && { color: lvl.color, fontWeight: "800" }]}
+                    >
+                      {lvl.title}
+                    </ThemedText>
+                    <ThemedText numberOfLines={1} style={styles.tabSub}>
+                      Lvl {lvl.levelNum}
+                    </ThemedText>
+                  </View>
+                  {isVerified && <Ionicons name="checkmark-circle" size={14} color="#10B981" />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* ACTIVE LEVEL FORM PANEL */}
+          <View style={[styles.formCard, { backgroundColor: cardBg, borderColor, borderTopColor: currentLevelObj.color, borderTopWidth: 3 }]}>
+            <View style={styles.levelBanner}>
+              <View style={[styles.levelIconBg, { backgroundColor: currentLevelObj.color + "18" }]}>
+                <Ionicons name={currentLevelObj.icon as any} size={24} color={currentLevelObj.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <ThemedText style={styles.levelCardTitle}>{currentLevelObj.title} Verification</ThemedText>
+                  <View style={[styles.tagPill, { backgroundColor: currentLevelObj.color + "20" }]}>
+                    <ThemedText style={[styles.tagText, { color: currentLevelObj.color }]}>{currentLevelObj.tag}</ThemedText>
+                  </View>
+                </View>
+                <ThemedText style={styles.levelCardDesc}>{currentLevelObj.desc}</ThemedText>
+              </View>
+            </View>
 
             {/* LEVEL 1: IDENTITY */}
             {activeLevel === "identity" && (
@@ -352,70 +372,138 @@ export default function SellerVerificationScreen() {
               </>
             )}
 
-            {/* DUMMY UPLOAD BOX */}
-            <TouchableOpacity style={[styles.uploadBox, { borderColor: isDark ? "#3A3A3C" : "#D1D5DB" }]}>
-              <Ionicons name="cloud-upload-outline" size={28} color="#3B82F6" />
-              <ThemedText style={styles.uploadTitle}>
-                Tap to Upload {activeLevel === "identity" ? "ID Card / Selfie" : activeLevel === "business" ? "CAC Certificate" : "Storefront & Interior Photo"}
-              </ThemedText>
-              <ThemedText style={styles.uploadSub}>Secure Private Stream (Admin Authorized Only)</ThemedText>
-            </TouchableOpacity>
+            {/* UPLOAD DOCUMENT CARDS */}
+            {activeLevel === "identity" ? (
+              <View style={{ gap: 8 }}>
+                <TouchableOpacity style={[styles.uploadBox, { borderColor: PRIMARY_COLOR + "60", backgroundColor: PRIMARY_COLOR + "0A" }]}>
+                  <Ionicons name="id-card-outline" size={24} color={PRIMARY_COLOR} />
+                  <ThemedText style={[styles.uploadTitle, { color: PRIMARY_COLOR }]}>
+                    Upload Government ID Card (NIN / Driver's License / Passport)
+                  </ThemedText>
+                  <ThemedText style={styles.uploadSub}>Clear front photo of official ID document</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.uploadBox, { borderColor: PRIMARY_COLOR + "60", backgroundColor: PRIMARY_COLOR + "0A" }]}>
+                  <Ionicons name="camera-outline" size={24} color={PRIMARY_COLOR} />
+                  <ThemedText style={[styles.uploadTitle, { color: PRIMARY_COLOR }]}>
+                    Take / Upload Live Selfie Photo
+                  </ThemedText>
+                  <ThemedText style={styles.uploadSub}>Clear facial selfie holding your ID for verification</ThemedText>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={[styles.uploadBox, { borderColor: PRIMARY_COLOR + "60", backgroundColor: PRIMARY_COLOR + "0A" }]}>
+                <Ionicons
+                  name={activeLevel === "business" ? "document-text-outline" : "images-outline"}
+                  size={24}
+                  color={PRIMARY_COLOR}
+                />
+                <ThemedText style={[styles.uploadTitle, { color: PRIMARY_COLOR }]}>
+                  Upload {activeLevel === "business" ? "CAC Certificate Document" : "Storefront & Interior Photo"}
+                </ThemedText>
+                <ThemedText style={styles.uploadSub}>Encrypted stream (Admin verification access only)</ThemedText>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
-              style={[styles.submitBtn, { backgroundColor: "#3B82F6" }, loading && { opacity: 0.7 }]}
+              style={[styles.submitBtn, { backgroundColor: currentLevelObj.color }, loading && { opacity: 0.7 }]}
               onPress={handleSubmitVerification}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <ThemedText style={styles.submitBtnText}>Save & Submit for Review</ThemedText>
+                <>
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#FFF" />
+                  <ThemedText style={styles.submitBtnText}>Save & Submit for Review</ThemedText>
+                </>
               )}
             </TouchableOpacity>
           </View>
-        )}
-      </ScrollView>
+
+          {/* AUTOMATED STATUSES COMPACT SUMMARY */}
+          <View style={[styles.autoLevelsCard, { backgroundColor: cardBg, borderColor }]}>
+            <View style={styles.autoRow}>
+              <Ionicons name="checkmark-done-circle" size={18} color="#10B981" />
+              <View style={{ flex: 1 }}>
+                <ThemedText style={styles.autoTitle}>Level 0 — Account Verified</ThemedText>
+                <ThemedText style={styles.autoSub}>Phone & OTP automatically validated</ThemedText>
+              </View>
+            </View>
+            <View style={[styles.divider, { backgroundColor: borderColor }]} />
+            <View style={styles.autoRow}>
+              <Ionicons name="star-outline" size={18} color={PRIMARY_COLOR} />
+              <View style={{ flex: 1 }}>
+                <ThemedText style={styles.autoTitle}>Level 4 — Trusted Seller</ThemedText>
+                <ThemedText style={styles.autoSub}>Earned through order history & low dispute rates</ThemedText>
+              </View>
+            </View>
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, gap: 16 },
-  badgesCard: { padding: 16, borderRadius: 20, borderWidth: 1, gap: 10 },
-  cardTitle: { fontSize: 15, fontWeight: "800" },
-  distinctionCard: { padding: 16, borderRadius: 20, borderWidth: 1, gap: 10 },
-  distinctionHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  distinctionTitle: { fontSize: 15, fontWeight: "800" },
-  distinctionSub: { fontSize: 12, opacity: 0.8, lineHeight: 17 },
-  pillarList: { gap: 6, marginTop: 4 },
-  pillarItem: { fontSize: 12, opacity: 0.85, lineHeight: 18 },
-  sectionLabel: { fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1 },
-  levelList: { gap: 10 },
-  levelCard: { padding: 14, borderRadius: 16, borderWidth: 1 },
-  levelHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  iconBg: { width: 42, height: 42, borderRadius: 21, justifyContent: "center", alignItems: "center" },
-  levelTitle: { fontSize: 14, fontWeight: "700" },
-  levelDesc: { fontSize: 11, opacity: 0.7, marginTop: 2, lineHeight: 15 },
-  levelReq: { fontSize: 11, fontWeight: "700", marginTop: 4 },
-  unlockedTag: { paddingLeft: 6 },
+  scrollContent: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 160, gap: 10 },
+  headerCard: { padding: 12, borderRadius: 16, borderWidth: 1, gap: 8 },
+  headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headerTitle: { fontSize: 15, fontWeight: "800" },
+  headerSub: { fontSize: 11, opacity: 0.6, marginTop: 1 },
+  infoToggleBtn: { width: 28, height: 28, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  infoDrawer: { padding: 10, borderRadius: 12, borderWidth: 1, gap: 4 },
+  infoDrawerTitle: { fontSize: 11, fontWeight: "800" },
+  pillarList: { gap: 4, marginTop: 2 },
+  pillarRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pillarItem: { flex: 1, fontSize: 10.5, opacity: 0.85, lineHeight: 15 },
+  sectionLabel: { fontSize: 10.5, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1, marginTop: 2 },
+  tabRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  tabChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 6,
+  },
+  tabIconBg: { width: 28, height: 28, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  tabTextCol: { flex: 1, justifyContent: "center" },
+  tabTitle: { fontSize: 11.5, fontWeight: "700" },
+  tabSub: { fontSize: 9.5, opacity: 0.6, marginTop: 1 },
   formCard: { padding: 16, borderRadius: 20, borderWidth: 1, gap: 14 },
+  levelBanner: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 },
+  levelIconBg: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },
+  levelCardTitle: { fontSize: 15, fontWeight: "800" },
+  tagPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  tagText: { fontSize: 10, fontWeight: "800" },
+  levelCardDesc: { fontSize: 12, opacity: 0.7, marginTop: 2, lineHeight: 16 },
   inputGroup: { gap: 6 },
   inputLabel: { fontSize: 13, fontWeight: "600" },
   requiredStar: { color: "#EF4444", fontWeight: "800" },
   input: { height: 46, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 14 },
   uploadBox: {
-    height: 100,
-    borderRadius: 16,
+    height: 76,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#3B82F608",
+    paddingHorizontal: 12,
+    gap: 3,
+    marginTop: 2,
   },
-  uploadTitle: { fontSize: 13, fontWeight: "700", color: "#3B82F6" },
+  uploadTitle: { fontSize: 13, fontWeight: "700" },
   uploadSub: { fontSize: 11, opacity: 0.6 },
-  submitBtn: { height: 48, borderRadius: 24, justifyContent: "center", alignItems: "center", marginTop: 6 },
-  submitBtnText: { color: "#FFF", fontWeight: "700", fontSize: 14 },
+  submitBtn: { height: 48, borderRadius: 24, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 6 },
+  submitBtnText: { color: "#FFF", fontWeight: "700", fontSize: 15 },
+  autoLevelsCard: { padding: 14, borderRadius: 18, borderWidth: 1, gap: 10, marginTop: 4 },
+  autoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  autoTitle: { fontSize: 12, fontWeight: "700" },
+  autoSub: { fontSize: 11, opacity: 0.6 },
+  divider: { height: StyleSheet.hairlineWidth, width: "100%" },
 });
