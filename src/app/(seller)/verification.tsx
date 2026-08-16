@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -76,6 +77,7 @@ export default function SellerVerificationScreen() {
   }>();
 
   const isDark = useColorScheme() === "dark";
+  const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
   const { showToast } = useToast();
 
@@ -476,7 +478,16 @@ export default function SellerVerificationScreen() {
       {/* DATE OF BIRTH SELECTOR MODAL */}
       <Modal visible={showDatePicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: cardBg, borderColor }]}>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: cardBg,
+                borderColor,
+                paddingBottom: Math.max(insets.bottom + 16, 28),
+              },
+            ]}
+          >
             <View style={styles.modalHeader}>
               <ThemedText style={styles.modalTitle}>Select Date of Birth</ThemedText>
               <TouchableOpacity onPress={() => setShowDatePicker(false)}>
