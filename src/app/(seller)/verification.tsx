@@ -11,23 +11,25 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { VerificationBadges, BadgeType } from "@/components/verification-badges";
+import { IdentityForm } from "@/components/verification/identity-form";
+import { BusinessForm } from "@/components/verification/business-form";
+import { StoreForm } from "@/components/verification/store-form";
+import { DobPickerModal } from "@/components/verification/dob-picker-modal";
 import api from "@/config/api";
 
 const PRIMARY_COLOR = "#3B82F6";
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const YEARS = Array.from({ length: 70 }, (_, i) => 2010 - i);
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 const ACTION_LEVELS = [
   {
@@ -85,20 +87,11 @@ export default function SellerVerificationScreen() {
 
   const [activeLevel, setActiveLevel] = useState("identity");
   const [showInfo, setShowInfo] = useState(false);
+  const [idType, setIdType] = useState("bvn");
   const [fullName, setFullName] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [dob, setDob] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(2000);
-  const [selectedMonth, setSelectedMonth] = useState(1);
-  const [selectedDay, setSelectedDay] = useState(15);
-
-  const handleConfirmDob = () => {
-    const formattedDay = String(selectedDay).padStart(2, "0");
-    const formattedMonth = String(selectedMonth).padStart(2, "0");
-    setDob(`${formattedDay} / ${formattedMonth} / ${selectedYear}`);
-    setShowDatePicker(false);
-  };
   const [businessName, setBusinessName] = useState("");
   const [businessNo, setBusinessNo] = useState("");
   const [shopAddress, setShopAddress] = useState("");
@@ -110,53 +103,185 @@ export default function SellerVerificationScreen() {
   const borderColor = isDark ? "#2C2C2E" : "#EAEAEA";
   const inputBg = isDark ? "#2C2C2E" : "#F8F9FA";
 
+  const [idDocumentUri, setIdDocumentUri] = useState<string | null>(null);
+  const [selfieDocumentUri, setSelfieDocumentUri] = useState<string | null>(null);
+  const [generalDocumentUri, setGeneralDocumentUri] = useState<string | null>(null);
+
+  const pickImage = async (type: "id" | "selfie" | "general") => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permission Required", "Please grant photo library access to upload documents.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        if (type === "id") setIdDocumentUri(uri);
+        else if (type === "selfie") setSelfieDocumentUri(uri);
+        else setGeneralDocumentUri(uri);
+      }
+    } catch (error: any) {
+      Alert.alert(
+        "Rebuild Required",
+        "The app binary needs to compile native modules for image picking. Please restart your Android build using: npx expo run:android"
+      );
+    }
+  };
+
   const currentLevelObj = ACTION_LEVELS.find((l) => l.id === activeLevel) || ACTION_LEVELS[0];
 
   const handleSubmitVerification = async () => {
     if (activeLevel === "identity") {
       if (!fullName.trim()) {
-        Alert.alert("Required Field", "Please enter your full legal name as shown on your ID.");
+        Alert.alert("Required Field", "Please enter your full legal name as shown on your document.");
         return;
       }
       if (!idNumber.trim()) {
-        Alert.alert("Required Field", "Please enter your Government ID / NIN number.");
+        Alert.alert(
+          "Required Field",
+          idType === "bvn" ? "Please enter your 11-digit BVN number." : "Please enter your Government ID number."
+        );
+        return;
+      }
+      if (idType === "bvn" && idNumber.trim().length !== 11) {
+        Alert.alert("Invalid BVN Number", "Bank Verification Number (BVN) must be exactly 11 digits.");
+        return;
+      }
+      if (!dob.trim()) {
+        Alert.alert("Required Field", "Please select your Date of Birth.");
+        return;
+      }
+      if (idType !== "bvn") {
+        if (!idDocumentUri) {
+          Alert.alert("Missing ID Document", "Please upload a photo of your official Government ID card.");
+          return;
+        }
+        if (!selfieDocumentUri) {
+          Alert.alert("Missing Live Selfie", "Please take and upload a live selfie photo holding your ID.");
+          return;
+        }
+      }
+    }
+
+    if (activeLevel === "business") {
+      if (!businessName.trim() || !businessNo.trim()) {
+        Alert.alert("Required Field", "Please enter your registered business name and CAC number.");
+        return;
+      }
+      if (!generalDocumentUri) {
+        Alert.alert("Missing CAC Document", "Please upload your official CAC Certificate document.");
         return;
       }
     }
 
-    if (activeLevel === "business" && (!businessName.trim() || !businessNo.trim())) {
-      Alert.alert("Required Field", "Please enter your registered business name and CAC number.");
-      return;
-    }
-
-    if (activeLevel === "physical_store" && (!shopAddress.trim() || !shopNo.trim())) {
-      Alert.alert("Required Field", "Please enter your physical shop address and shop number.");
-      return;
+    if (activeLevel === "physical_store") {
+      if (!shopAddress.trim() || !shopNo.trim()) {
+        Alert.alert("Required Field", "Please enter your physical shop address and shop number.");
+        return;
+      }
+      if (!generalDocumentUri) {
+        Alert.alert("Missing Storefront Photo", "Please upload a photo of your physical shop front.");
+        return;
+      }
     }
 
     setLoading(true);
     try {
-      const payload = {
-        verification_type: activeLevel,
-        full_name: fullName.trim() || undefined,
-        id_number: idNumber.trim() || undefined,
-        dob: dob.trim() || undefined,
-        business_name: businessName.trim() || undefined,
-        business_no: businessNo.trim() || undefined,
-        shop_address: shopAddress.trim() || undefined,
-        shop_no: shopNo.trim() || undefined,
-      };
+      const formData = new FormData();
+      formData.append("verification_type", String(activeLevel));
 
-      const response = await fetch(api.ENDPOINTS.VENDOR.VERIFICATIONS, {
-        method: "POST",
-        headers: api.getHeaders(token),
-        body: JSON.stringify(payload),
+      if (activeLevel === "identity") {
+        if (idType) formData.append("id_type", String(idType));
+        if (fullName.trim()) formData.append("full_name", String(fullName.trim()));
+        if (idNumber.trim()) formData.append("id_number", String(idNumber.trim()));
+        if (dob.trim()) formData.append("dob", String(dob.trim()));
+
+        if (idType !== "bvn") {
+          if (idDocumentUri && typeof idDocumentUri === "string") {
+            const filename = idDocumentUri.split("/").pop() || "id_card.jpg";
+            const match = /\.(\w+)$/.exec(filename);
+            const fileType = match ? `image/${match[1].toLowerCase()}` : "image/jpeg";
+            formData.append("id_document", {
+              uri: idDocumentUri,
+              name: filename,
+              type: fileType,
+            } as any);
+          }
+
+          if (selfieDocumentUri && typeof selfieDocumentUri === "string") {
+            const filename = selfieDocumentUri.split("/").pop() || "selfie.jpg";
+            const match = /\.(\w+)$/.exec(filename);
+            const fileType = match ? `image/${match[1].toLowerCase()}` : "image/jpeg";
+            formData.append("selfie_document", {
+              uri: selfieDocumentUri,
+              name: filename,
+              type: fileType,
+            } as any);
+          }
+        }
+      } else if (activeLevel === "business") {
+        if (businessName.trim()) formData.append("business_name", String(businessName.trim()));
+        if (businessNo.trim()) formData.append("business_no", String(businessNo.trim()));
+
+        if (generalDocumentUri && typeof generalDocumentUri === "string") {
+          const filename = generalDocumentUri.split("/").pop() || "cac_doc.jpg";
+          const match = /\.(\w+)$/.exec(filename);
+          const fileType = match ? `image/${match[1].toLowerCase()}` : "image/jpeg";
+          formData.append("document", {
+            uri: generalDocumentUri,
+            name: filename,
+            type: fileType,
+          } as any);
+        }
+      } else if (activeLevel === "physical_store") {
+        if (shopAddress.trim()) formData.append("shop_address", String(shopAddress.trim()));
+        if (shopNo.trim()) formData.append("shop_no", String(shopNo.trim()));
+
+        if (generalDocumentUri && typeof generalDocumentUri === "string") {
+          const filename = generalDocumentUri.split("/").pop() || "storefront.jpg";
+          const match = /\.(\w+)$/.exec(filename);
+          const fileType = match ? `image/${match[1].toLowerCase()}` : "image/jpeg";
+          formData.append("document", {
+            uri: generalDocumentUri,
+            name: filename,
+            type: fileType,
+          } as any);
+        }
+      }
+
+      const { status, json } = await new Promise<{ status: number; json: any }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", api.ENDPOINTS.VENDOR.VERIFICATIONS);
+        xhr.setRequestHeader("Accept", "application/json");
+        if (token) {
+          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        }
+
+        xhr.onload = () => {
+          try {
+            const parsed = JSON.parse(xhr.responseText);
+            resolve({ status: xhr.status, json: parsed });
+          } catch (e) {
+            resolve({ status: xhr.status, json: { message: xhr.responseText || "Server response format error" } });
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error("Network connection error submitting verification."));
+        };
+
+        xhr.send(formData as any);
       });
 
-      const json = await response.json();
-
-      if (response.ok || response.status === 201) {
-        showToast("Verification request submitted & saved!", "success");
+      if (status >= 200 && status < 300) {
+        showToast("Verification documents & details uploaded successfully!", "success");
 
         if (activeLevel === "identity" && !myBadges.includes("identity_verified")) {
           setMyBadges([...myBadges, "identity_verified"]);
@@ -166,10 +291,14 @@ export default function SellerVerificationScreen() {
           setMyBadges([...myBadges, "store_verified"]);
         }
       } else {
-        showToast(json.message || "Failed to submit verification request.", "error");
+        const errorMsg = json.message || (json.errors ? Object.values(json.errors).flat().join("\n") : "Failed to submit verification request.");
+        showToast(errorMsg, "error");
+        Alert.alert("Submission Error", errorMsg);
       }
-    } catch (error) {
-      showToast("Network error submitting verification.", "error");
+    } catch (error: any) {
+      console.error("Verification submit error:", error);
+      showToast(error.message || "Network error submitting verification.", "error");
+      Alert.alert("Network Error", error.message || "Could not connect to verification server.");
     } finally {
       setLoading(false);
     }
@@ -285,158 +414,58 @@ export default function SellerVerificationScreen() {
                 <ThemedText style={styles.levelCardDesc}>{currentLevelObj.desc}</ThemedText>
               </View>
             </View>
-
             {/* LEVEL 1: IDENTITY */}
             {activeLevel === "identity" && (
-              <>
-                <View style={styles.inputGroup}>
-                  <ThemedText style={styles.inputLabel}>
-                    Full Legal Name <ThemedText style={styles.requiredStar}>*</ThemedText>
-                  </ThemedText>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-                    placeholder="As shown on official ID card"
-                    placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-                    value={fullName}
-                    onChangeText={setFullName}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <ThemedText style={styles.inputLabel}>
-                    Government ID / NIN / Driver's License No. <ThemedText style={styles.requiredStar}>*</ThemedText>
-                  </ThemedText>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-                    placeholder="e.g. 12345678901"
-                    placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-                    value={idNumber}
-                    onChangeText={setIdNumber}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <ThemedText style={styles.inputLabel}>
-                    Date of Birth <ThemedText style={styles.requiredStar}>*</ThemedText>
-                  </ThemedText>
-                  <TouchableOpacity
-                    style={[
-                      styles.input,
-                      { backgroundColor: inputBg, borderColor, justifyContent: "center" },
-                    ]}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                      <ThemedText
-                        style={{
-                          color: dob ? (isDark ? "#FFF" : "#000") : isDark ? "#8E8E93" : "#999",
-                          fontSize: 14,
-                        }}
-                      >
-                        {dob || "Select Date of Birth (DD / MM / YYYY)"}
-                      </ThemedText>
-                      <Ionicons name="calendar-outline" size={18} color={PRIMARY_COLOR} />
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              </>
+              <IdentityForm
+                idType={idType}
+                setIdType={setIdType}
+                fullName={fullName}
+                setFullName={setFullName}
+                idNumber={idNumber}
+                setIdNumber={setIdNumber}
+                dob={dob}
+                onOpenDatePicker={() => setShowDatePicker(true)}
+                idDocumentUri={idDocumentUri}
+                selfieDocumentUri={selfieDocumentUri}
+                onPickImage={pickImage}
+                isDark={isDark}
+                inputBg={inputBg}
+                borderColor={borderColor}
+                primaryColor={PRIMARY_COLOR}
+              />
             )}
 
             {/* LEVEL 2: BUSINESS */}
             {activeLevel === "business" && (
-              <>
-                <View style={styles.inputGroup}>
-                  <ThemedText style={styles.inputLabel}>
-                    Registered Business Name <ThemedText style={styles.requiredStar}>*</ThemedText>
-                  </ThemedText>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-                    placeholder="e.g. Mini Mart Logistics Ltd"
-                    placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-                    value={businessName}
-                    onChangeText={setBusinessName}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <ThemedText style={styles.inputLabel}>
-                    CAC Registration Number <ThemedText style={styles.requiredStar}>*</ThemedText>
-                  </ThemedText>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-                    placeholder="e.g. RC 1234567"
-                    placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-                    value={businessNo}
-                    onChangeText={setBusinessNo}
-                  />
-                </View>
-              </>
+              <BusinessForm
+                businessName={businessName}
+                setBusinessName={setBusinessName}
+                businessNo={businessNo}
+                setBusinessNo={setBusinessNo}
+                generalDocumentUri={generalDocumentUri}
+                onPickImage={() => pickImage("general")}
+                isDark={isDark}
+                inputBg={inputBg}
+                borderColor={borderColor}
+                primaryColor={PRIMARY_COLOR}
+              />
             )}
 
             {/* LEVEL 3: PHYSICAL STORE */}
             {activeLevel === "physical_store" && (
-              <>
-                <View style={styles.inputGroup}>
-                  <ThemedText style={styles.inputLabel}>
-                    Full Physical Shop Address <ThemedText style={styles.requiredStar}>*</ThemedText>
-                  </ThemedText>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-                    placeholder="e.g. Kantin Kwari Market, Kano"
-                    placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-                    value={shopAddress}
-                    onChangeText={setShopAddress}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <ThemedText style={styles.inputLabel}>
-                    Shop / Storefront Number <ThemedText style={styles.requiredStar}>*</ThemedText>
-                  </ThemedText>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-                    placeholder="e.g. Shop B4, 2nd Floor"
-                    placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-                    value={shopNo}
-                    onChangeText={setShopNo}
-                  />
-                </View>
-              </>
+              <StoreForm
+                shopAddress={shopAddress}
+                setShopAddress={setShopAddress}
+                shopNo={shopNo}
+                setShopNo={setShopNo}
+                generalDocumentUri={generalDocumentUri}
+                onPickImage={() => pickImage("general")}
+                isDark={isDark}
+                inputBg={inputBg}
+                borderColor={borderColor}
+                primaryColor={PRIMARY_COLOR}
+              />
             )}
-
-            {/* UPLOAD DOCUMENT CARDS */}
-            {activeLevel === "identity" ? (
-              <View style={{ gap: 8 }}>
-                <TouchableOpacity style={[styles.uploadBox, { borderColor: PRIMARY_COLOR + "60", backgroundColor: PRIMARY_COLOR + "0A" }]}>
-                  <Ionicons name="id-card-outline" size={24} color={PRIMARY_COLOR} />
-                  <ThemedText style={[styles.uploadTitle, { color: PRIMARY_COLOR }]}>
-                    Upload Government ID Card (NIN / Driver's License / Passport)
-                  </ThemedText>
-                  <ThemedText style={styles.uploadSub}>Clear front photo of official ID document</ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.uploadBox, { borderColor: PRIMARY_COLOR + "60", backgroundColor: PRIMARY_COLOR + "0A" }]}>
-                  <Ionicons name="camera-outline" size={24} color={PRIMARY_COLOR} />
-                  <ThemedText style={[styles.uploadTitle, { color: PRIMARY_COLOR }]}>
-                    Take / Upload Live Selfie Photo
-                  </ThemedText>
-                  <ThemedText style={styles.uploadSub}>Clear facial selfie holding your ID for verification</ThemedText>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity style={[styles.uploadBox, { borderColor: PRIMARY_COLOR + "60", backgroundColor: PRIMARY_COLOR + "0A" }]}>
-                <Ionicons
-                  name={activeLevel === "business" ? "document-text-outline" : "images-outline"}
-                  size={24}
-                  color={PRIMARY_COLOR}
-                />
-                <ThemedText style={[styles.uploadTitle, { color: PRIMARY_COLOR }]}>
-                  Upload {activeLevel === "business" ? "CAC Certificate Document" : "Storefront & Interior Photo"}
-                </ThemedText>
-                <ThemedText style={styles.uploadSub}>Encrypted stream (Admin verification access only)</ThemedText>
-              </TouchableOpacity>
-            )}
-
             <TouchableOpacity
               style={[styles.submitBtn, { backgroundColor: currentLevelObj.color }, loading && { opacity: 0.7 }]}
               onPress={handleSubmitVerification}
@@ -476,87 +505,16 @@ export default function SellerVerificationScreen() {
       </KeyboardAvoidingView>
 
       {/* DATE OF BIRTH SELECTOR MODAL */}
-      <Modal visible={showDatePicker} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalCard,
-              {
-                backgroundColor: cardBg,
-                borderColor,
-                paddingBottom: Math.max(insets.bottom + 16, 28),
-              },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>Select Date of Birth</ThemedText>
-              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                <Ionicons name="close" size={22} color={isDark ? "#FFF" : "#000"} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.pickerRow}>
-              {/* DAY COLUMN */}
-              <View style={styles.pickerCol}>
-                <ThemedText style={styles.pickerColLabel}>Day</ThemedText>
-                <ScrollView style={styles.scrollCol} showsVerticalScrollIndicator={false}>
-                  {DAYS.map((d) => (
-                    <TouchableOpacity
-                      key={d}
-                      style={[styles.pickerItem, selectedDay === d && { backgroundColor: PRIMARY_COLOR + "20" }]}
-                      onPress={() => setSelectedDay(d)}
-                    >
-                      <ThemedText style={[styles.pickerItemText, selectedDay === d && { color: PRIMARY_COLOR, fontWeight: "800" }]}>
-                        {String(d).padStart(2, "0")}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
-              {/* MONTH COLUMN */}
-              <View style={styles.pickerCol}>
-                <ThemedText style={styles.pickerColLabel}>Month</ThemedText>
-                <ScrollView style={styles.scrollCol} showsVerticalScrollIndicator={false}>
-                  {MONTHS.map((m, idx) => (
-                    <TouchableOpacity
-                      key={m}
-                      style={[styles.pickerItem, selectedMonth === idx + 1 && { backgroundColor: PRIMARY_COLOR + "20" }]}
-                      onPress={() => setSelectedMonth(idx + 1)}
-                    >
-                      <ThemedText style={[styles.pickerItemText, selectedMonth === idx + 1 && { color: PRIMARY_COLOR, fontWeight: "800" }]}>
-                        {m}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
-              {/* YEAR COLUMN */}
-              <View style={styles.pickerCol}>
-                <ThemedText style={styles.pickerColLabel}>Year</ThemedText>
-                <ScrollView style={styles.scrollCol} showsVerticalScrollIndicator={false}>
-                  {YEARS.map((y) => (
-                    <TouchableOpacity
-                      key={y}
-                      style={[styles.pickerItem, selectedYear === y && { backgroundColor: PRIMARY_COLOR + "20" }]}
-                      onPress={() => setSelectedYear(y)}
-                    >
-                      <ThemedText style={[styles.pickerItemText, selectedYear === y && { color: PRIMARY_COLOR, fontWeight: "800" }]}>
-                        {y}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-
-            <TouchableOpacity style={[styles.submitBtn, { backgroundColor: PRIMARY_COLOR, marginTop: 10 }]} onPress={handleConfirmDob}>
-              <ThemedText style={styles.submitBtnText}>Confirm Date of Birth</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <DobPickerModal
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onConfirm={(formattedDob) => setDob(formattedDob)}
+        isDark={isDark}
+        cardBg={cardBg}
+        borderColor={borderColor}
+        insetsBottom={insets.bottom}
+        primaryColor={PRIMARY_COLOR}
+      />
     </ThemedView>
   );
 }

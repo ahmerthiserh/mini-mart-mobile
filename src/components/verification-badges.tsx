@@ -19,7 +19,7 @@ const BADGE_CONFIG: Record<BadgeType, { title: string; icon: string; color: stri
   },
   identity_verified: {
     title: "Identity Verified",
-    icon: "person-checkmark",
+    icon: "person-circle",
     color: "#3B82F6",
     description: "Mini Mart verified this seller's government-issued ID card and legal full name.",
   },
