@@ -147,7 +147,7 @@ export default function CategoriesScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.categoriesGridContent}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.categoriesGridContent}>
             {categories.map((cat) => (
               <TouchableOpacity 
                 key={cat.id} 
@@ -163,7 +163,7 @@ export default function CategoriesScreen() {
                     </ThemedText>
                   )}
                 </View>
-                <ThemedText style={styles.mainCategoryTitle}>{cat.title}</ThemedText>
+                <ThemedText style={styles.mainCategoryTitle} numberOfLines={2}>{cat.title}</ThemedText>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -217,7 +217,7 @@ export default function CategoriesScreen() {
                 <View style={styles.productImageContainer}>
                   <PlaceholderGlow style={[StyleSheet.absoluteFill, { borderRadius: 12 }]} borderRadius={12} />
                   {product.image && (
-                     <Image source={{ uri: product.image }} style={[StyleSheet.absoluteFill, { borderRadius: 12 }]} contentFit="cover" transition={200} />
+                     <Image source={{ uri: product.image }} style={[StyleSheet.absoluteFill, { borderRadius: 12 }]} contentFit="contain" transition={200} />
                   )}
                 </View>
 
@@ -247,6 +247,11 @@ export default function CategoriesScreen() {
   );
 }
 
+const NUM_COLUMNS = 4;
+const GRID_PADDING = 12;
+const GRID_GAP = 8;
+const ITEM_WIDTH = Math.floor((width - (GRID_PADDING * 2) - (GRID_GAP * (NUM_COLUMNS - 1))) / NUM_COLUMNS);
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -254,29 +259,31 @@ const styles = StyleSheet.create({
   categoriesGridContent: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 16,
-    gap: 16,
+    paddingHorizontal: GRID_PADDING,
+    paddingVertical: 16,
+    gap: GRID_GAP,
   },
   mainCategoryCard: {
-    width: (width - 64) / 3,
+    width: ITEM_WIDTH,
     flexDirection: 'column',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderRadius: 16,
-    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    gap: 8,
   },
   mainCategoryIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
   mainCategoryTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 14,
   },
   activeCategoryHeader: {
     flexDirection: 'row',

@@ -117,7 +117,7 @@ export default function SearchScreen() {
               >
                 <View style={[styles.imageContainer, { backgroundColor: isDark ? '#333' : '#e0e0e0' }]}>
                   {item.image ? (
-                    <Image source={{ uri: item.image }} style={styles.image} contentFit="cover" transition={200} />
+                    <Image source={{ uri: item.image }} style={styles.image} contentFit="contain" transition={200} />
                   ) : (
                     <Ionicons name="image-outline" size={24} color={isDark ? '#666' : '#999'} />
                   )}

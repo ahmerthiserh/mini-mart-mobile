@@ -4,14 +4,11 @@ import {
   ScrollView,
   View,
   TouchableOpacity,
-  TextInput,
   useColorScheme,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -41,7 +38,7 @@ const ACTION_LEVELS = [
     icon: "id-card-outline",
     color: PRIMARY_COLOR,
     tag: "Mandatory",
-    desc: "Verifies the person operating the store (NIN, Passport, or Driver's License).",
+    desc: "Verifies the person operating the store (Instant NIN or BVN digital verification).",
     requirementText: "Required for all sellers.",
   },
   {
@@ -146,19 +143,28 @@ export default function SellerVerificationScreen() {
       if (!idNumber.trim()) {
         Alert.alert(
           "Required Field",
-          idType === "bvn" ? "Please enter your 11-digit BVN number." : "Please enter your Government ID number."
+          idType === "bvn"
+            ? "Please enter your 11-digit BVN number."
+            : idType === "nin"
+            ? "Please enter your 11-digit NIN number."
+            : "Please enter your Government ID number."
         );
         return;
       }
-      if (idType === "bvn" && idNumber.trim().length !== 11) {
-        Alert.alert("Invalid BVN Number", "Bank Verification Number (BVN) must be exactly 11 digits.");
+      if ((idType === "bvn" || idType === "nin") && idNumber.trim().length !== 11) {
+        Alert.alert(
+          "Invalid ID Number",
+          idType === "bvn"
+            ? "Bank Verification Number (BVN) must be exactly 11 digits."
+            : "National Identity Number (NIN) must be exactly 11 digits."
+        );
         return;
       }
       if (!dob.trim()) {
         Alert.alert("Required Field", "Please select your Date of Birth.");
         return;
       }
-      if (idType !== "bvn") {
+      if (idType !== "bvn" && idType !== "nin") {
         if (!idDocumentUri) {
           Alert.alert("Missing ID Document", "Please upload a photo of your official Government ID card.");
           return;
@@ -203,7 +209,7 @@ export default function SellerVerificationScreen() {
         if (idNumber.trim()) formData.append("id_number", String(idNumber.trim()));
         if (dob.trim()) formData.append("dob", String(dob.trim()));
 
-        if (idType !== "bvn") {
+        if (idType !== "bvn" && idType !== "nin") {
           if (idDocumentUri && typeof idDocumentUri === "string") {
             const filename = idDocumentUri.split("/").pop() || "id_card.jpg";
             const match = /\.(\w+)$/.exec(filename);
@@ -338,7 +344,7 @@ export default function SellerVerificationScreen() {
                   <View style={styles.pillarRow}>
                     <Ionicons name="id-card-outline" size={14} color={PRIMARY_COLOR} />
                     <ThemedText style={styles.pillarItem}>
-                      <ThemedText style={{ fontWeight: "700" }}>Identity:</ThemedText> Verifies the person (NIN/Passport). Required for all sellers.
+                      <ThemedText style={{ fontWeight: "700" }}>Identity:</ThemedText> Verifies the person (Instant NIN or BVN). Required for all sellers.
                     </ThemedText>
                   </View>
                   <View style={styles.pillarRow}>
@@ -480,25 +486,6 @@ export default function SellerVerificationScreen() {
                 </>
               )}
             </TouchableOpacity>
-          </View>
-
-          {/* AUTOMATED STATUSES COMPACT SUMMARY */}
-          <View style={[styles.autoLevelsCard, { backgroundColor: cardBg, borderColor }]}>
-            <View style={styles.autoRow}>
-              <Ionicons name="checkmark-done-circle" size={18} color="#10B981" />
-              <View style={{ flex: 1 }}>
-                <ThemedText style={styles.autoTitle}>Level 0 — Account Verified</ThemedText>
-                <ThemedText style={styles.autoSub}>Phone & OTP automatically validated</ThemedText>
-              </View>
-            </View>
-            <View style={[styles.divider, { backgroundColor: borderColor }]} />
-            <View style={styles.autoRow}>
-              <Ionicons name="star-outline" size={18} color={PRIMARY_COLOR} />
-              <View style={{ flex: 1 }}>
-                <ThemedText style={styles.autoTitle}>Level 4 — Trusted Seller</ThemedText>
-                <ThemedText style={styles.autoSub}>Earned through order history & low dispute rates</ThemedText>
-              </View>
-            </View>
           </View>
 
         </ScrollView>

@@ -1,8 +1,8 @@
 // Toggle to true for local testing, or set EXPO_PUBLIC_API_URL in .env
 const USE_LOCAL_API = true;
 
-// Use your computer's local Wi-Fi IP (192.168.1.250) or localhost (when running `adb reverse tcp:8000 tcp:8000`)
-const LOCAL_API_URL = 'http://192.168.1.250:8000/api';
+// Use your computer's local Wi-Fi IP (192.168.0.4) or localhost (when running `adb reverse tcp:8000 tcp:8000`)
+const LOCAL_API_URL = 'http://192.168.0.4:8000/api';
 const PROD_API_URL = 'https://minimart.vetristech.com/api';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || (USE_LOCAL_API ? LOCAL_API_URL : PROD_API_URL);

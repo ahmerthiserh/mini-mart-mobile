@@ -180,7 +180,7 @@ export default function ProductDetailsScreen() {
     <ThemedView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Image Carousel Wrapper */}
-        <View style={styles.carouselWrapper}>
+        <View style={[styles.carouselWrapper, { backgroundColor: isDark ? '#0D0D0D' : '#F5F5F7' }]}>
           <ScrollView 
             ref={imageScrollRef}
             horizontal 
@@ -197,7 +197,7 @@ export default function ProductDetailsScreen() {
           >
             {product.images && product.images.length > 0 ? (
               product.images.map((img, index) => (
-                <Image key={index} source={{ uri: img }} style={styles.image} contentFit="cover" transition={200} />
+                <Image key={index} source={{ uri: img }} style={styles.image} contentFit="contain" transition={200} />
               ))
             ) : (
               <View style={[styles.image, { justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#111' : '#f5f5f5' }]}>
@@ -237,14 +237,14 @@ export default function ProductDetailsScreen() {
                   key={index}
                   style={[
                     styles.thumbnailWrapper,
-                    { borderColor: activeImageIndex === index ? Colors[isDark ? 'dark' : 'light'].primary : borderColor }
+                    { borderColor: activeImageIndex === index ? Colors[isDark ? 'dark' : 'light'].primary : borderColor, backgroundColor: isDark ? '#0D0D0D' : '#F5F5F7' }
                   ]}
                   onPress={() => {
                     setActiveImageIndex(index);
                     imageScrollRef.current?.scrollTo({ x: index * width, animated: true });
                   }}
                 >
-                  <Image source={{ uri: img }} style={styles.thumbnail} contentFit="cover" />
+                  <Image source={{ uri: img }} style={styles.thumbnail} contentFit="contain" />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -284,6 +284,17 @@ export default function ProductDetailsScreen() {
               />
             </View>
           </View>
+
+          {/* Description Section */}
+          {!!product.description && (
+            <>
+              <View style={[styles.divider, { backgroundColor: borderColor }]} />
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>Description</ThemedText>
+                <ThemedText style={styles.description}>{product.description}</ThemedText>
+              </View>
+            </>
+          )}
 
           {/* Divider */}
           <View style={[styles.divider, { backgroundColor: borderColor }]} />

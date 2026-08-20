@@ -313,7 +313,7 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
                 <Image
                   source={{ uri: product.image }}
                   style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
-                  contentFit="cover"
+                  contentFit="contain"
                   transition={200}
                 />
               )}

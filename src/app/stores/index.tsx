@@ -290,7 +290,7 @@ export default function StoresScreen() {
               <View style={styles.productImageContainer}>
                 <PlaceholderGlow style={[StyleSheet.absoluteFill, { borderRadius: 12 }]} borderRadius={12} />
                 {product.image && (
-                  <Image source={{ uri: product.image }} style={[StyleSheet.absoluteFill, { borderRadius: 12 }]} contentFit="cover" transition={200} />
+                  <Image source={{ uri: product.image }} style={[StyleSheet.absoluteFill, { borderRadius: 12 }]} contentFit="contain" transition={200} />
                 )}
               </View>
 

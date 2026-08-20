@@ -23,10 +23,7 @@ type IdentityFormProps = {
 
 const ID_TYPES = [
   { id: "bvn", label: "BVN (Bank Verification Number)", sub: "Instant Digital Verification (No Photo Required)" },
-  { id: "nin", label: "NIN (National Identity Number)", sub: "Requires Government ID Card photo & selfie" },
-  { id: "voters_card", label: "Voter's Card", sub: "Requires official Voter's card photo & selfie" },
-  { id: "drivers_license", label: "Driver's License", sub: "Requires valid FRSC license photo & selfie" },
-  { id: "passport", label: "International Passport", sub: "Requires data page photo & live selfie" },
+  { id: "nin", label: "NIN (National Identity Number)", sub: "Instant Digital Verification (No Photo Required)" },
 ];
 
 export function IdentityForm({
@@ -47,7 +44,7 @@ export function IdentityForm({
   primaryColor,
 }: IdentityFormProps) {
   const [showDropdown, setShowDropdown] = useState(false);
-  const isBvn = idType === "bvn";
+  const isDigitalId = idType === "bvn" || idType === "nin";
   const selectedTypeObj = ID_TYPES.find((t) => t.id === idType) || ID_TYPES[0];
 
   return (
@@ -85,14 +82,14 @@ export function IdentityForm({
 
       <View style={styles.inputGroup}>
         <ThemedText style={styles.inputLabel}>
-          {isBvn ? "11-Digit BVN Number" : "Government ID / Document Number"} <ThemedText style={styles.requiredStar}>*</ThemedText>
+          {isDigitalId ? (idType === "nin" ? "11-Digit NIN Number" : "11-Digit BVN Number") : "Government ID / Document Number"} <ThemedText style={styles.requiredStar}>*</ThemedText>
         </ThemedText>
         <TextInput
           style={[styles.input, { backgroundColor: inputBg, color: isDark ? "#FFF" : "#000", borderColor }]}
-          placeholder={isBvn ? "e.g. 22233344455" : "e.g. 12345678901"}
+          placeholder={isDigitalId ? (idType === "nin" ? "e.g. 11223344556" : "e.g. 22233344455") : "e.g. 12345678901"}
           placeholderTextColor={isDark ? "#8E8E93" : "#999"}
-          keyboardType={isBvn ? "numeric" : "default"}
-          maxLength={isBvn ? 11 : 30}
+          keyboardType={isDigitalId ? "numeric" : "default"}
+          maxLength={isDigitalId ? 11 : 30}
           value={idNumber}
           onChangeText={setIdNumber}
         />
@@ -120,16 +117,16 @@ export function IdentityForm({
         </TouchableOpacity>
       </View>
 
-      {/* IF BVN: SHOW INSTANT VERIFICATION BADGE WITHOUT IMAGE UPLOAD */}
-      {isBvn ? (
+      {/* IF DIGITAL ID (BVN / NIN): SHOW INSTANT VERIFICATION NOTICE WITHOUT IMAGE UPLOAD */}
+      {isDigitalId ? (
         <View style={[styles.bvnNoticeBox, { backgroundColor: primaryColor + "10", borderColor: primaryColor + "40" }]}>
           <Ionicons name="shield-checkmark" size={22} color={primaryColor} />
           <View style={{ flex: 1 }}>
             <ThemedText style={[styles.bvnNoticeTitle, { color: primaryColor }]}>
-              Instant Digital BVN Verification
+              {idType === "nin" ? "Instant Digital NIN (NIMC) Verification" : "Instant Digital BVN Verification"}
             </ThemedText>
             <ThemedText style={styles.bvnNoticeSub}>
-              No document photos or selfies required! Your BVN will be automatically verified against bank databases.
+              No document photos or selfies required! Your {idType === "nin" ? "NIN" : "BVN"} will be automatically verified against national identity databases.
             </ThemedText>
           </View>
         </View>
