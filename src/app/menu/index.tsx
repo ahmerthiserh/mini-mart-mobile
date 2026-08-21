@@ -203,22 +203,7 @@ export default function MenuScreen() {
     (Array.isArray(user?.permissions) && user.permissions.includes("manage products"))
   );
 
-  const displayMenuItems = React.useMemo(() => {
-    if (canManageProducts) {
-      return [
-        {
-          id: "manage-products",
-          title: "Manage Products",
-          subtitle: "Add, edit & track seller inventory",
-          icon: "cube-outline",
-          route: "/(seller)/manage-store",
-          authRequired: true,
-        },
-        ...MENU_ITEMS,
-      ];
-    }
-    return MENU_ITEMS;
-  }, [canManageProducts]);
+  const displayMenuItems = MENU_ITEMS;
 
   return (
     <ThemedView style={styles.container}>
@@ -294,6 +279,43 @@ export default function MenuScreen() {
             onStoresPress={() => router.push("/stores")}
             onCategoriesPress={() => router.push("/categories")}
           />
+        )}
+
+        {/* MY STORE SECTION — seller only */}
+        {canManageProducts && (
+          <>
+            <ThemedText style={[styles.sectionTitle, { color: isDark ? '#8E8E93' : '#6C6C70' }]}>
+              My Store
+            </ThemedText>
+            <View style={[styles.menuList, { backgroundColor: cardBg, borderColor }]}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push('/(seller)/store-profile' as any)}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                  <Ionicons name="storefront-outline" size={20} color={primaryColor} />
+                </View>
+                <View style={styles.menuItemTextContainer}>
+                  <ThemedText style={styles.menuItemTitle}>Store Profile</ThemedText>
+                  <ThemedText style={styles.menuItemSub}>Logo, cover image & store info</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={isDark ? '#555' : '#BBB'} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.menuItem, { borderBottomWidth: 0 }]}
+                onPress={() => router.push('/(seller)/manage-store' as any)}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                  <Ionicons name="briefcase-outline" size={20} color={primaryColor} />
+                </View>
+                <View style={styles.menuItemTextContainer}>
+                  <ThemedText style={styles.menuItemTitle}>Manage Products</ThemedText>
+                  <ThemedText style={styles.menuItemSub}>Add, edit & track seller inventory</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={isDark ? '#555' : '#BBB'} />
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
         {/* ACCOUNT / SERVICES MENU */}
