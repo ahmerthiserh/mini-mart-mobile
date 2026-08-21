@@ -23,8 +23,6 @@ type StoreItem = {
   logo?: string;
   cover_image?: string;
   is_verified?: boolean;
-  rating?: number;
-  reviews_count?: number;
   location?: string;
   whatsapp_url?: string;
 };

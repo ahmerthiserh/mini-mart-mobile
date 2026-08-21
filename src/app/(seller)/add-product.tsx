@@ -213,7 +213,7 @@ export default function AddProductScreen() {
 
       if (ok) {
         showToast("Product uploaded successfully!", "success");
-        router.replace("/(seller)/seller-products" as any);
+        router.replace("/(seller)/manage-store" as any);
       } else {
         if (statusCode === 422 && data.message?.includes("upload limit reached")) {
           Alert.alert(

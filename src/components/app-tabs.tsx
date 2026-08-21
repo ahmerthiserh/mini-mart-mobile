@@ -66,15 +66,15 @@ export default function AppTabs() {
         }}
       />
       <Tabs.Screen
-        name="(seller)/seller-products"
+        name="(seller)/manage-store"
         options={{
-          title: "My Products",
-          href: canManageProducts ? "/(seller)/seller-products" : null,
+          title: "Manage Store",
+          href: canManageProducts ? "/(seller)/manage-store" : null,
           headerShown: true,
-          header: () => <HomeHeader showSearch={false} title="Manage Products" />,
+          header: () => <HomeHeader showSearch={false} title="Manage Store" />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "cube" : "cube-outline"}
+              name={focused ? "briefcase" : "briefcase-outline"}
               size={23}
               color={color}
             />
