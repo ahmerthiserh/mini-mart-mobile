@@ -200,7 +200,7 @@ export default function CartScreen() {
                 </View>
                 
                 <View style={styles.itemDetails}>
-                  <ThemedText style={styles.itemCategory}>{item.category || 'Uncategorized'}</ThemedText>
+                  {item.category ? <ThemedText style={styles.itemCategory}>{item.category}</ThemedText> : null}
                   <ThemedText style={styles.itemName} numberOfLines={1}>{item.name}</ThemedText>
                   {item.preferred_colors && (
                     <ThemedText style={styles.itemColor}>Color: {item.preferred_colors}</ThemedText>

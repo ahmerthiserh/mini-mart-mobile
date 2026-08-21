@@ -138,7 +138,7 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
           setError("Connection failed. Please check if the server is running.");
         }
       } finally {
-        if (!url && !isRefresh) {
+        if (!url) {
           setLoading(false);
           props.onLoadingStateChange?.(false);
         }
@@ -320,9 +320,11 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
             </View>
 
             <View style={styles.productInfo}>
-              <ThemedText style={styles.productCategory}>
-                {product.category?.name || "Uncategorized"}
-              </ThemedText>
+              {product.category?.name ? (
+                <ThemedText style={styles.productCategory}>
+                  {product.category.name}
+                </ThemedText>
+              ) : null}
               <ThemedText
                 type="default"
                 style={styles.productName}

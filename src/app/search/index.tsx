@@ -124,7 +124,7 @@ export default function SearchScreen() {
                 </View>
                 <View style={styles.productDetails}>
                   <ThemedText style={styles.productName} numberOfLines={1}>{item.name}</ThemedText>
-                  <ThemedText style={styles.productCategory}>{item.category?.name || 'Uncategorized'}</ThemedText>
+                  {item.category?.name ? <ThemedText style={styles.productCategory}>{item.category.name}</ThemedText> : null}
                   <ThemedText style={styles.productPrice}>₦{parseFloat(item.price).toLocaleString()}</ThemedText>
                 </View>
               </TouchableOpacity>

@@ -2,7 +2,7 @@
 const USE_LOCAL_API = true;
 
 // Use your computer's local Wi-Fi IP (192.168.0.4) or localhost (when running `adb reverse tcp:8000 tcp:8000`)
-const LOCAL_API_URL = 'http://192.168.0.4:8000/api';
+const LOCAL_API_URL = 'http://localhost:8000/api';
 const PROD_API_URL = 'https://minimart.vetristech.com/api';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || (USE_LOCAL_API ? LOCAL_API_URL : PROD_API_URL);
@@ -29,9 +29,10 @@ export const API_ENDPOINTS = {
   STORE_PRODUCTS: (id: string | number) => `${API_BASE_URL}/stores/${id}/products`,
   SELLER_TYPES: `${API_BASE_URL}/seller-types`,
 
-  // Categories
+  // Categories & Units
   CATEGORIES: `${API_BASE_URL}/categories`,
   CATEGORY_PRODUCTS: (categoryId: string | number) => `${API_BASE_URL}/categories/${categoryId}/products`,
+  MEASUREMENT_UNITS: `${API_BASE_URL}/measurement-units`,
 
   // Cart
   CART: `${API_BASE_URL}/cart`,

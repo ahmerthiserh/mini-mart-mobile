@@ -138,6 +138,7 @@ export default function AppTabs() {
             href: null,
             title: route.title,
             headerShown: true,
+            tabBarStyle: { display: "none" },
             header: () => (
               <HomeHeader
                 showSearch={false}

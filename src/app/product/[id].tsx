@@ -255,11 +255,13 @@ export default function ProductDetailsScreen() {
           {/* Header Row: Title & Category */}
           <View style={styles.titleCategoryContainer}>
             <ThemedText style={styles.title}>{product.name}</ThemedText>
-            <View style={[styles.categoryBadge, { backgroundColor: isDark ? '#222' : '#E6F4FE' }]}>
-              <ThemedText style={[styles.categoryText, { color: isDark ? '#90CDF4' : '#4A90E2' }]}>
-                {product.category?.name || 'Uncategorized'}
-              </ThemedText>
-            </View>
+            {product.category?.name ? (
+              <View style={[styles.categoryBadge, { backgroundColor: isDark ? '#222' : '#E6F4FE' }]}>
+                <ThemedText style={[styles.categoryText, { color: isDark ? '#90CDF4' : '#4A90E2' }]}>
+                  {product.category.name}
+                </ThemedText>
+              </View>
+            ) : null}
           </View>
 
           {/* Unit Price */}

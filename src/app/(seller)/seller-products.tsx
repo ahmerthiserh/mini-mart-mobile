@@ -13,7 +13,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
@@ -80,9 +80,12 @@ export default function SellerProductsScreen() {
     [token]
   );
 
-  useEffect(() => {
-    fetchVendorProducts();
-  }, [fetchVendorProducts]);
+  // Re-fetch product and slot data whenever screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchVendorProducts(searchQuery);
+    }, [fetchVendorProducts, searchQuery])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -122,6 +125,31 @@ export default function SellerProductsScreen() {
     );
   };
 
+  const handleAddProduct = () => {
+    const available = slotInfo?.available_slots;
+    const hasAvailable = slotInfo
+      ? slotInfo.has_available_slot !== undefined
+        ? slotInfo.has_available_slot
+        : (available === "∞" || Number(available) > 0)
+      : true;
+
+    if (!hasAvailable) {
+      Alert.alert(
+        "No Slots Available",
+        "You have reached your product upload limit. Please buy additional product slots to list new products.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Buy Slots",
+            onPress: () => router.push("/(seller)/buy-slots" as any),
+          },
+        ]
+      );
+    } else {
+      router.push("/(seller)/add-product" as any);
+    }
+  };
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView
@@ -139,7 +167,7 @@ export default function SellerProductsScreen() {
           />
         }
       >
-        {/* SLOT USAGE BADGE & BUY SLOTS ACTION */}
+        {/* SLOT USAGE BADGE & ACTIONS */}
         {slotInfo && (
           <View
             style={[
@@ -164,14 +192,25 @@ export default function SellerProductsScreen() {
               </ThemedText>
             </View>
 
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={styles.buySlotsBtn}
-              onPress={() => router.push("/(seller)/buy-slots" as any)}
-            >
-              <Ionicons name="add-circle" size={16} color="#FFF" />
-              <Text style={styles.buySlotsBtnText}>Buy Slots</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.actionBtn, { backgroundColor: "#0284C7" }]}
+                onPress={handleAddProduct}
+              >
+                <Ionicons name="add-circle-outline" size={15} color="#FFF" />
+                <Text style={styles.actionBtnText}>Add Product</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.actionBtn, { backgroundColor: "#10B981" }]}
+                onPress={() => router.push("/(seller)/buy-slots" as any)}
+              >
+                <Ionicons name="cart-outline" size={15} color="#FFF" />
+                <Text style={styles.actionBtnText}>Buy Slots</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -301,6 +340,18 @@ export default function SellerProductsScreen() {
           })
         )}
       </ScrollView>
+
+      {/* Floating Action Button (Add Product) */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={[
+          styles.fab,
+          { backgroundColor: "#0284C7", bottom: Math.max(insets.bottom + 20, 30) },
+        ]}
+        onPress={handleAddProduct}
+      >
+        <Ionicons name="add" size={28} color="#FFF" />
+      </TouchableOpacity>
     </ThemedView>
   );
 }
@@ -341,19 +392,32 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 11,
   },
-  buySlotsBtn: {
+  actionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#10B981",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 10,
     gap: 4,
   },
-  buySlotsBtnText: {
+  actionBtnText: {
     color: "#FFF",
     fontWeight: "700",
-    fontSize: 12,
+    fontSize: 11,
+  },
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.5,
   },
   searchBox: {
     flexDirection: "row",

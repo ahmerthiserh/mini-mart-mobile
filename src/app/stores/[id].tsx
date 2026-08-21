@@ -206,7 +206,7 @@ export default function StoreCatalogScreen() {
               </View>
 
               <View style={styles.productInfo}>
-                <ThemedText style={styles.productCategory}>{product.category?.name || 'General'}</ThemedText>
+                {product.category?.name ? <ThemedText style={styles.productCategory}>{product.category.name}</ThemedText> : null}
                 <ThemedText type="default" style={styles.productName} numberOfLines={1}>{product.name}</ThemedText>
                 <View style={styles.productFooter}>
                   <ThemedText style={styles.productPrice}>₦{parseFloat(product.price).toLocaleString()}</ThemedText>
