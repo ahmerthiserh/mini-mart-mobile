@@ -8,9 +8,11 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +33,7 @@ export default function StoreProfileScreen() {
 
   const [store, setStore] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Editable fields
@@ -51,12 +54,14 @@ export default function StoreProfileScreen() {
   const inputBg = isDark ? '#1C1C1E' : '#F5F5F7';
   const primary = Colors[isDark ? 'dark' : 'light'].primary;
 
-  useEffect(() => {
-    fetchStore();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchStore();
+    }, [])
+  );
 
-  const fetchStore = async () => {
-    setLoading(true);
+  const fetchStore = async (isRefreshing = false) => {
+    if (!isRefreshing) setLoading(true);
     try {
       const res = await fetch(api.ENDPOINTS.VENDOR.STORE, { headers: api.getHeaders(token) });
       if (res.ok) {
@@ -74,12 +79,18 @@ export default function StoreProfileScreen() {
       showToast('Failed to load store profile', 'error');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    fetchStore(true);
+  }, []);
+
   const pickImage = async (type: 'logo' | 'cover') => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: type === 'logo' ? [1, 1] : [16, 9],
       quality: 0.85,
@@ -98,46 +109,88 @@ export default function StoreProfileScreen() {
     setSaving(true);
     try {
       const formData = new FormData();
-      formData.append('store_name', storeName.trim());
-      if (description) formData.append('description', description);
-      if (phone) formData.append('phone_number', phone);
-      if (whatsapp) formData.append('whatsapp_number', whatsapp);
-      if (market) formData.append('market', market);
-      if (shopNumber) formData.append('shop_number', shopNumber);
-      if (openingHours) formData.append('opening_hours', openingHours);
+      formData.append('_method', 'PUT');
+      formData.append('store_name', String(storeName).trim());
+      if (description) formData.append('description', String(description).trim());
+      if (phone) formData.append('phone_number', String(phone).trim());
+      if (whatsapp) formData.append('whatsapp_number', String(whatsapp).trim());
+      if (market) formData.append('market', String(market).trim());
+      if (shopNumber) formData.append('shop_number', String(shopNumber).trim());
+      if (openingHours) formData.append('opening_hours', String(openingHours).trim());
 
-      if (newLogo) {
-        const filename = newLogo.split('/').pop() ?? 'logo.jpg';
-        const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
-        formData.append('logo', { uri: newLogo, name: filename, type: `image/${ext}` } as any);
-      }
-      if (newCover) {
-        const filename = newCover.split('/').pop() ?? 'cover.jpg';
-        const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
-        formData.append('cover_image', { uri: newCover, name: filename, type: `image/${ext}` } as any);
+      if (newLogo && typeof newLogo === 'string') {
+        let cleanUri = newLogo;
+        if (Platform.OS === 'android' && !cleanUri.startsWith('file://') && !cleanUri.startsWith('content://')) {
+          cleanUri = `file://${cleanUri}`;
+        }
+        const rawName = cleanUri.split('/').pop() || `logo_${Date.now()}.jpg`;
+        const cleanName = rawName.includes('.') ? rawName : `${rawName}.jpg`;
+        const ext = cleanName.split('.').pop()?.toLowerCase() || 'jpg';
+        const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+
+        formData.append('logo', {
+          uri: cleanUri,
+          name: cleanName,
+          type: mimeType,
+        } as any);
       }
 
-      const res = await fetch(api.ENDPOINTS.VENDOR.STORE, {
-        method: 'PUT',
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-          Accept: 'application/json',
-          // Do NOT set Content-Type — let the browser/native set it with boundary for multipart
-        },
-        body: formData,
+      if (newCover && typeof newCover === 'string') {
+        let cleanUri = newCover;
+        if (Platform.OS === 'android' && !cleanUri.startsWith('file://') && !cleanUri.startsWith('content://')) {
+          cleanUri = `file://${cleanUri}`;
+        }
+        const rawName = cleanUri.split('/').pop() || `cover_${Date.now()}.jpg`;
+        const cleanName = rawName.includes('.') ? rawName : `${rawName}.jpg`;
+        const ext = cleanName.split('.').pop()?.toLowerCase() || 'jpg';
+        const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+
+        formData.append('cover_image', {
+          uri: cleanUri,
+          name: cleanName,
+          type: mimeType,
+        } as any);
+      }
+
+      const res = await new Promise<{ ok: boolean; status: number; data: any }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', api.ENDPOINTS.VENDOR.STORE);
+        xhr.setRequestHeader('Accept', 'application/json');
+        if (token) {
+          xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        }
+
+        xhr.onload = () => {
+          let responseData: any = {};
+          try {
+            responseData = JSON.parse(xhr.responseText);
+          } catch {
+            responseData = {};
+          }
+          resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, data: responseData });
+        };
+
+        xhr.onerror = () => {
+          reject(new Error('Network error during store profile upload'));
+        };
+
+        xhr.send(formData);
       });
 
-      const data = await res.json();
       if (res.ok) {
         showToast('Store profile updated!', 'success');
-        setStore(data.store ?? data);
+        setStore(res.data.store ?? res.data);
         setNewLogo(null);
         setNewCover(null);
+        setTimeout(() => {
+          router.replace('/menu');
+        }, 300);
       } else {
-        const msg = data?.message || data?.errors ? Object.values(data.errors ?? {})[0] : 'Update failed';
+        const msg = res.data?.message || (res.data?.errors ? Object.values(res.data.errors)[0] : 'Update failed');
         showToast(String(msg), 'error');
       }
     } catch (e) {
+      console.error('Store profile update error:', e);
       showToast('Network error. Please try again.', 'error');
     } finally {
       setSaving(false);
@@ -157,6 +210,14 @@ export default function StoreProfileScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[primary]}
+              tintColor={primary}
+            />
+          }
         >
           {/* ── Cover image ── */}
           <TouchableOpacity style={styles.coverWrapper} onPress={() => pickImage('cover')} activeOpacity={0.85}>
@@ -193,6 +254,12 @@ export default function StoreProfileScreen() {
                 <Ionicons name="camera" size={11} color="#fff" />
               </View>
             </TouchableOpacity>
+            {/* ── Logo hint ── */}
+            <View style={styles.brandingHeader}>
+              <ThemedText style={styles.brandingText}>
+                Store Logo / Profile Image<ThemedText style={{ color: '#EF4444', fontWeight: '700' }}> *</ThemedText>
+              </ThemedText>
+            </View>
           </TouchableOpacity>
 
           {/* ── Form fields ── */}
@@ -276,13 +343,34 @@ export default function StoreProfileScreen() {
           </View>
 
           {/* Store status info */}
-          {store && (
-            <View style={[styles.statusCard, { backgroundColor: cardBg, borderColor }]}>
-              <StatusRow label="Status" value={store.is_verified ? 'Verified ✓' : 'Unverified'} valueColor={store.is_verified ? '#10B981' : '#F59E0B'} />
-              <StatusRow label="Approval" value={store.approval_status ?? '—'} />
-              <StatusRow label="Slots Used" value={`${store.used_slots ?? 0} / ${store.total_slots ?? 0}`} />
-            </View>
-          )}
+          {store && (() => {
+            const isVerified = !!(store.is_verified || store.verification_status === 'approved');
+            const statusText = isVerified
+              ? 'Verified ✓'
+              : store.verification_status === 'pending'
+              ? 'Pending Verification'
+              : 'Unverified';
+            const statusColor = isVerified ? '#10B981' : store.verification_status === 'pending' ? '#F59E0B' : '#6B7280';
+            const approvalText = store.approval_status
+              ? store.approval_status.charAt(0).toUpperCase() + store.approval_status.slice(1)
+              : '—';
+            const approvalColor =
+              store.approval_status === 'approved'
+                ? '#10B981'
+                : store.approval_status === 'pending'
+                ? '#F59E0B'
+                : store.approval_status === 'rejected'
+                ? '#EF4444'
+                : undefined;
+
+            return (
+              <View style={[styles.statusCard, { backgroundColor: cardBg, borderColor }]}>
+                <StatusRow label="Verification Status" value={statusText} valueColor={statusColor} />
+                <StatusRow label="Store Approval" value={approvalText} valueColor={approvalColor} />
+                <StatusRow label="Product Slots" value={`${store.used_slots ?? 0} / ${store.total_slots ?? 0}`} />
+              </View>
+            );
+          })()}
           {/* ── Save button ── */}
           <TouchableOpacity
             style={[styles.saveBtn, { opacity: saving ? 0.65 : 1 }]}
@@ -309,9 +397,14 @@ function Field({
   label: string; value: string; onChangeText: (v: string) => void; placeholder?: string;
   multiline?: boolean; keyboardType?: any; isDark: boolean; inputBg: string; borderColor: string;
 }) {
+  const parts = label.split('*');
+
   return (
     <View style={fieldStyles.wrap}>
-      <ThemedText style={fieldStyles.label}>{label}</ThemedText>
+      <ThemedText style={fieldStyles.label}>
+        {parts[0].trim()}
+        {parts.length > 1 && <ThemedText style={{ color: '#EF4444', fontWeight: '700' }}> *</ThemedText>}
+      </ThemedText>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -418,6 +511,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.65)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  brandingHeader: {
+    position: 'absolute',
+    bottom: -32,
+    left: 112,
+  },
+  brandingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    opacity: 0.8,
   },
 
   // Form
