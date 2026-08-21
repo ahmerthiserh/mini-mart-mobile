@@ -195,6 +195,31 @@ export default function MenuScreen() {
     router.push(item.route as any);
   };
 
+  const canManageProducts = !!(
+    user?.can_manage_products ||
+    user?.is_seller ||
+    storeData?.is_verified ||
+    (Array.isArray(user?.roles) && (user.roles.includes("seller") || user.roles.includes("Seller"))) ||
+    (Array.isArray(user?.permissions) && user.permissions.includes("manage products"))
+  );
+
+  const displayMenuItems = React.useMemo(() => {
+    if (canManageProducts) {
+      return [
+        {
+          id: "manage-products",
+          title: "Manage Products",
+          subtitle: "Add, edit & track seller inventory",
+          icon: "cube-outline",
+          route: "/vendor-products",
+          authRequired: true,
+        },
+        ...MENU_ITEMS,
+      ];
+    }
+    return MENU_ITEMS;
+  }, [canManageProducts]);
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView
@@ -273,7 +298,7 @@ export default function MenuScreen() {
 
         {/* ACCOUNT / SERVICES MENU */}
         <MenuItemsList
-          menuItems={MENU_ITEMS}
+          menuItems={displayMenuItems as any}
           isLoggedIn={isLoggedIn}
           isDark={isDark}
           cardBg={cardBg}

@@ -5,11 +5,22 @@ import { HomeHeader } from "@/components/home-header";
 import { Colors } from "@/constants/Colors";
 import { HIDDEN_ROUTES } from "@/constants/hidden-routes";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AppTabs() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const { cartCount } = useCart();
+  const { user } = useAuth();
+
+  const canManageProducts = !!(
+    user?.can_manage_products ||
+    user?.is_seller ||
+    (Array.isArray(user?.roles) &&
+      (user.roles.includes("seller") || user.roles.includes("Seller"))) ||
+    (Array.isArray(user?.permissions) &&
+      user.permissions.includes("manage products"))
+  );
 
   return (
     <Tabs
@@ -48,6 +59,22 @@ export default function AppTabs() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "storefront" : "storefront-outline"}
+              size={23}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="vendor-products"
+        options={{
+          title: "Products",
+          href: canManageProducts ? "/vendor-products" : null,
+          headerShown: true,
+          header: () => <HomeHeader showSearch={false} title="Manage Products" />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "cube" : "cube-outline"}
               size={23}
               color={color}
             />
