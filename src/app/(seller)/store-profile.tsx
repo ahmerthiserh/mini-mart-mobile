@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
 
   // Cover
   coverWrapper: { position: 'relative', marginBottom: 48 },
-  cover: { width: '100%', height: 160, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+  cover: { width: '100%', height: 120, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
   coverPlaceholder: { alignItems: 'center', gap: 6 },
   coverPlaceholderText: { fontSize: 13, opacity: 0.5 },
   coverEditBadge: {
