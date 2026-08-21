@@ -211,7 +211,7 @@ export default function MenuScreen() {
           title: "Manage Products",
           subtitle: "Add, edit & track seller inventory",
           icon: "cube-outline",
-          route: "/vendor-products",
+          route: "/(seller)/seller-products",
           authRequired: true,
         },
         ...MENU_ITEMS,

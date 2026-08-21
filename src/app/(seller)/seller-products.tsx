@@ -23,7 +23,7 @@ import { useToast } from "@/context/ToastContext";
 import { Colors } from "@/constants/Colors";
 import api from "@/config/api";
 
-export default function VendorProductsScreen() {
+export default function SellerProductsScreen() {
   const router = useRouter();
   const isDark = useColorScheme() === "dark";
   const insets = useSafeAreaInsets();
@@ -139,28 +139,39 @@ export default function VendorProductsScreen() {
           />
         }
       >
-        {/* SLOT USAGE BADGE */}
+        {/* SLOT USAGE BADGE & BUY SLOTS ACTION */}
         {slotInfo && (
           <View
             style={[
               styles.slotBanner,
               {
-                backgroundColor: isDark ? "#1E2A38" : "#EBF5FF",
-                borderColor: isDark ? "#2C3E50" : "#D0E7FF",
+                backgroundColor: isDark ? "#1E293B" : "#F0F7FF",
+                borderColor: isDark ? "#334155" : "#BAE6FD",
               },
             ]}
           >
             <View style={{ flex: 1 }}>
-              <ThemedText style={styles.slotTitle}>Product Slots</ThemedText>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <ThemedText style={styles.slotTitle}>Product Slots</ThemedText>
+                <View style={styles.slotBadge}>
+                  <Text style={styles.slotBadgeText}>
+                    {slotInfo.available_slots ?? "∞"} Available
+                  </Text>
+                </View>
+              </View>
               <ThemedText style={styles.slotSub}>
                 {slotInfo.used_slots ?? 0} of {slotInfo.total_slots ?? "Unlimited"} slots used
               </ThemedText>
             </View>
-            <View style={[styles.slotBadge, { backgroundColor: primaryColor }]}>
-              <Text style={styles.slotBadgeText}>
-                {slotInfo.available_slots ?? "∞"} Available
-              </Text>
-            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.buySlotsBtn}
+              onPress={() => router.push("/(seller)/buy-slots" as any)}
+            >
+              <Ionicons name="add-circle" size={16} color="#FFF" />
+              <Text style={styles.buySlotsBtnText}>Buy Slots</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -320,11 +331,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   slotBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 14,
+    backgroundColor: "#0284C7",
   },
   slotBadgeText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  buySlotsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#10B981",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 4,
+  },
+  buySlotsBtnText: {
     color: "#FFF",
     fontWeight: "700",
     fontSize: 12,

@@ -26,19 +26,30 @@ export function usePushNotifications() {
   const { token } = useAuth();
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then(token => {
-      setExpoPushToken(token);
+    let isMounted = true;
+
+    registerForPushNotificationsAsync().then((token) => {
+      if (isMounted && token) {
+        setExpoPushToken(token);
+      }
     });
 
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification: Notifications.Notification) => {
-      setNotification(notification);
-    });
+    notificationListener.current = Notifications.addNotificationReceivedListener(
+      (notification: Notifications.Notification) => {
+        if (isMounted) {
+          setNotification(notification);
+        }
+      }
+    );
 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response: Notifications.NotificationResponse) => {
-      console.log(response);
-    });
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(
+      (response: Notifications.NotificationResponse) => {
+        console.log(response);
+      }
+    );
 
     return () => {
+      isMounted = false;
       if (notificationListener.current) {
         notificationListener.current.remove();
       }

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as ExpoSecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import api from '../config/api';
 
 const SecureStore = {
   getItemAsync: async (key: string) => {
@@ -30,6 +31,10 @@ export type User = {
   name: string;
   email: string;
   phone?: string;
+  is_seller?: boolean;
+  can_manage_products?: boolean;
+  roles?: string[];
+  permissions?: string[];
   [key: string]: any;
 };
 
@@ -40,6 +45,7 @@ type AuthContextType = {
   login: (token: string, user: User) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (user: User) => Promise<void>;
+  refreshUser: (authToken?: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -49,6 +55,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   logout: async () => {},
   updateUser: async () => {},
+  refreshUser: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -57,6 +64,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const refreshUser = async (authToken?: string) => {
+    const activeToken = authToken || token;
+    if (!activeToken) return;
+
+    try {
+      const res = await fetch(api.ENDPOINTS.USER_PROFILE, {
+        headers: api.getHeaders(activeToken),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const updatedUser = data.user || data;
+        if (updatedUser) {
+          await SecureStore.setItemAsync('auth_user', JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }
+      }
+    } catch (error) {
+      console.log('Error refreshing user profile:', error);
+    }
+  };
 
   useEffect(() => {
     // Check for saved token and user on app load
@@ -68,6 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (savedToken && savedUser) {
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
+          refreshUser(savedToken);
         }
       } catch (error) {
         console.error('Failed to load auth data', error);
@@ -85,6 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await SecureStore.setItemAsync('auth_user', JSON.stringify(newUser));
       setToken(newToken);
       setUser(newUser);
+      refreshUser(newToken);
     } catch (error) {
       console.error('Failed to save auth data', error);
     }
@@ -111,7 +142,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

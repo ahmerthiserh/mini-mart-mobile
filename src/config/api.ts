@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
     SUBSCRIPTION_PLANS: `${API_BASE_URL}/vendor/subscriptions/plans`,
     MY_SUBSCRIPTION: `${API_BASE_URL}/vendor/subscriptions/my-subscription`,
     SUBSCRIBE: `${API_BASE_URL}/vendor/subscriptions/subscribe`,
+    BUY_SLOTS: `${API_BASE_URL}/vendor/subscriptions/buy-slots`,
     VERIFICATIONS: `${API_BASE_URL}/vendor/verifications`,
   },
 
