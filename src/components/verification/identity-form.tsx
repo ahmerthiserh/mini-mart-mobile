@@ -3,6 +3,9 @@ import { StyleSheet, View, TouchableOpacity, TextInput, Image, Modal } from "rea
 import { Ionicons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
 
+import { Alert } from "react-native";
+import { PhotoSourceModal } from "./photo-source-modal";
+
 type IdentityFormProps = {
   idType: string;
   setIdType: (val: string) => void;
@@ -15,6 +18,7 @@ type IdentityFormProps = {
   idDocumentUri: string | null;
   selfieDocumentUri: string | null;
   onPickImage: (type: "id" | "selfie") => void;
+  onTakeCameraPhoto: (type: "id" | "selfie") => void;
   isDark: boolean;
   inputBg: string;
   borderColor: string;
@@ -22,8 +26,8 @@ type IdentityFormProps = {
 };
 
 const ID_TYPES = [
-  { id: "bvn", label: "BVN (Bank Verification Number)", sub: "Instant Digital Verification (No Photo Required)" },
-  { id: "nin", label: "NIN (National Identity Number)", sub: "Instant Digital Verification (No Photo Required)" },
+  { id: "bvn", label: "BVN (Bank Verification Number)", sub: "Instant Digital Verification" },
+  { id: "nin", label: "NIN (National Identity Number)", sub: "Instant Digital Verification" },
 ];
 
 export function IdentityForm({
@@ -38,14 +42,23 @@ export function IdentityForm({
   idDocumentUri,
   selfieDocumentUri,
   onPickImage,
+  onTakeCameraPhoto,
   isDark,
   inputBg,
   borderColor,
   primaryColor,
 }: IdentityFormProps) {
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [targetPhotoType, setTargetPhotoType] = useState<"id" | "selfie">("selfie");
   const [showDropdown, setShowDropdown] = useState(false);
+
   const isDigitalId = idType === "bvn" || idType === "nin";
   const selectedTypeObj = ID_TYPES.find((t) => t.id === idType) || ID_TYPES[0];
+
+  const handleOpenPhotoModal = (type: "id" | "selfie") => {
+    setTargetPhotoType(type);
+    setShowPhotoModal(true);
+  };
 
   return (
     <View style={styles.container}>
@@ -117,29 +130,31 @@ export function IdentityForm({
         </TouchableOpacity>
       </View>
 
-      {/* IF DIGITAL ID (BVN / NIN): SHOW INSTANT VERIFICATION NOTICE WITHOUT IMAGE UPLOAD */}
-      {isDigitalId ? (
+      {/* DIGITAL ID INFO BANNER */}
+      {isDigitalId && (
         <View style={[styles.bvnNoticeBox, { backgroundColor: primaryColor + "10", borderColor: primaryColor + "40" }]}>
           <Ionicons name="shield-checkmark" size={22} color={primaryColor} />
           <View style={{ flex: 1 }}>
             <ThemedText style={[styles.bvnNoticeTitle, { color: primaryColor }]}>
-              {idType === "nin" ? "Instant Digital NIN (NIMC) Verification" : "Instant Digital BVN Verification"}
+              {idType === "nin" ? "Digital NIN (NIMC) Verification" : "Digital BVN Verification"}
             </ThemedText>
             <ThemedText style={styles.bvnNoticeSub}>
-              No document photos or selfies required! Your {idType === "nin" ? "NIN" : "BVN"} will be automatically verified against national identity databases.
+              Your {idType === "nin" ? "NIN" : "BVN"} number will be verified alongside your facial selfie photo below.
             </ThemedText>
           </View>
         </View>
-      ) : (
-        /* UPLOAD DOCUMENT CARDS FOR NON-BVN ID TYPES */
-        <View style={styles.uploadContainer}>
+      )}
+
+      {/* UPLOAD DOCUMENT CARDS */}
+      <View style={styles.uploadContainer}>
+        {!isDigitalId && (
           <TouchableOpacity
             style={[
               styles.uploadBox,
               { borderColor: primaryColor + "60", backgroundColor: primaryColor + "0A" },
               idDocumentUri ? { borderStyle: "solid", borderColor: primaryColor } : null,
             ]}
-            onPress={() => onPickImage("id")}
+            onPress={() => handleOpenPhotoModal("id")}
           >
             {idDocumentUri ? (
               <View style={styles.uploadedRow}>
@@ -156,44 +171,63 @@ export function IdentityForm({
               <>
                 <Ionicons name="id-card-outline" size={24} color={primaryColor} />
                 <ThemedText style={[styles.uploadTitle, { color: primaryColor }]}>
-                  Upload Government ID Card Photo
+                  Upload Government ID Card Photo <ThemedText style={styles.requiredStar}>*</ThemedText>
                 </ThemedText>
                 <ThemedText style={styles.uploadSub}>Clear front photo of official ID document</ThemedText>
               </>
             )}
           </TouchableOpacity>
+        )}
 
-          <TouchableOpacity
-            style={[
-              styles.uploadBox,
-              { borderColor: primaryColor + "60", backgroundColor: primaryColor + "0A" },
-              selfieDocumentUri ? { borderStyle: "solid", borderColor: primaryColor } : null,
-            ]}
-            onPress={() => onPickImage("selfie")}
-          >
-            {selfieDocumentUri ? (
-              <View style={styles.uploadedRow}>
-                <Image source={{ uri: selfieDocumentUri }} style={styles.thumbImage} />
-                <View style={{ flex: 1 }}>
-                  <ThemedText style={[styles.uploadTitle, { color: primaryColor }]}>
-                    Live Selfie Photo Selected
-                  </ThemedText>
-                  <ThemedText style={styles.uploadSub}>Tap to retake / change selfie</ThemedText>
-                </View>
-                <Ionicons name="checkmark-circle" size={22} color="#10B981" />
-              </View>
-            ) : (
-              <>
-                <Ionicons name="camera-outline" size={24} color={primaryColor} />
+        {/* ALWAYS REQUIRE SELFIE PHOTO FOR PERSON IDENTITY */}
+        <TouchableOpacity
+          style={[
+            styles.uploadBox,
+            { borderColor: primaryColor + "60", backgroundColor: primaryColor + "0A" },
+            selfieDocumentUri ? { borderStyle: "solid", borderColor: primaryColor } : null,
+          ]}
+          onPress={() => handleOpenPhotoModal("selfie")}
+        >
+          {selfieDocumentUri ? (
+            <View style={styles.uploadedRow}>
+              <Image source={{ uri: selfieDocumentUri }} style={styles.thumbImage} />
+              <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.uploadTitle, { color: primaryColor }]}>
-                  Take / Upload Live Selfie Photo
+                  Live Selfie Photo Selected
                 </ThemedText>
-                <ThemedText style={styles.uploadSub}>Clear facial selfie holding your ID for verification</ThemedText>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
+                <ThemedText style={styles.uploadSub}>Tap to retake / change selfie photo</ThemedText>
+              </View>
+              <Ionicons name="checkmark-circle" size={22} color="#10B981" />
+            </View>
+          ) : (
+            <>
+              <Ionicons name="camera-outline" size={24} color={primaryColor} />
+              <ThemedText style={[styles.uploadTitle, { color: primaryColor }]}>
+                Take / Upload Live Selfie Photo <ThemedText style={styles.requiredStar}>*</ThemedText>
+              </ThemedText>
+              <ThemedText style={styles.uploadSub}>Clear facial photo for person verification</ThemedText>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* MODERN PHOTO SOURCE BOTTOM SHEET MODAL */}
+      <PhotoSourceModal
+        visible={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        onSelectCamera={() => onTakeCameraPhoto(targetPhotoType)}
+        onSelectGallery={() => onPickImage(targetPhotoType)}
+        title={targetPhotoType === "selfie" ? "Facial Selfie Verification" : "Government ID Photo"}
+        subtitle={
+          targetPhotoType === "selfie"
+            ? "Choose how you want to provide your facial selfie photo"
+            : "Choose how you want to upload your official ID card document"
+        }
+        isDark={isDark}
+        cardBg={isDark ? "#1C1C1E" : "#FFFFFF"}
+        borderColor={borderColor}
+        primaryColor={primaryColor}
+      />
 
       {/* DROPDOWN SELECTION MODAL */}
       <Modal visible={showDropdown} transparent animationType="fade" onRequestClose={() => setShowDropdown(false)}>

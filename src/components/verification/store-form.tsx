@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, View, TouchableOpacity, TextInput, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
+import { PhotoSourceModal } from "@/components/verification/photo-source-modal";
 
 type StoreFormProps = {
   shopAddress: string;
@@ -10,6 +11,7 @@ type StoreFormProps = {
   setShopNo: (val: string) => void;
   generalDocumentUri: string | null;
   onPickImage: () => void;
+  onTakeCameraPhoto: () => void;
   isDark: boolean;
   inputBg: string;
   borderColor: string;
@@ -23,11 +25,14 @@ export function StoreForm({
   setShopNo,
   generalDocumentUri,
   onPickImage,
+  onTakeCameraPhoto,
   isDark,
   inputBg,
   borderColor,
   primaryColor,
 }: StoreFormProps) {
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+
   return (
     <View style={styles.container}>
       <View style={styles.inputGroup}>
@@ -62,7 +67,7 @@ export function StoreForm({
           { borderColor: primaryColor + "60", backgroundColor: primaryColor + "0A" },
           generalDocumentUri ? { borderStyle: "solid", borderColor: primaryColor } : null,
         ]}
-        onPress={onPickImage}
+        onPress={() => setShowPhotoModal(true)}
       >
         {generalDocumentUri ? (
           <View style={styles.uploadedRow}>
@@ -79,12 +84,25 @@ export function StoreForm({
           <>
             <Ionicons name="images-outline" size={24} color={primaryColor} />
             <ThemedText style={[styles.uploadTitle, { color: primaryColor }]}>
-              Upload Storefront & Interior Photo
+              Upload Storefront & Interior Photo <ThemedText style={styles.requiredStar}>*</ThemedText>
             </ThemedText>
-            <ThemedText style={styles.uploadSub}>Encrypted stream (Admin verification access only)</ThemedText>
+            <ThemedText style={styles.uploadSub}>Take live camera photo or pick from gallery</ThemedText>
           </>
         )}
       </TouchableOpacity>
+
+      <PhotoSourceModal
+        visible={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        onSelectCamera={onTakeCameraPhoto}
+        onSelectGallery={onPickImage}
+        title="Storefront & Interior Photo"
+        subtitle="Choose how you want to capture your physical market store photo"
+        isDark={isDark}
+        cardBg={isDark ? "#1C1C1E" : "#FFFFFF"}
+        borderColor={borderColor}
+        primaryColor={primaryColor}
+      />
     </View>
   );
 }

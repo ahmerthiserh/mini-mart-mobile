@@ -7,11 +7,43 @@ type SellerCtaCardProps = {
   isDark: boolean;
   hasStore?: boolean;
   storeName?: string;
+  isVerified?: boolean;
+  verificationStatus?: string | null;
   onPress: () => void;
   onVerificationPress?: () => void;
 };
 
-export function SellerCtaCard({ isDark, hasStore, storeName, onPress, onVerificationPress }: SellerCtaCardProps) {
+export function SellerCtaCard({
+  isDark,
+  hasStore,
+  storeName,
+  isVerified,
+  verificationStatus,
+  onPress,
+  onVerificationPress,
+}: SellerCtaCardProps) {
+  let btnText = "Apply for Store Verification";
+  let btnIcon: any = "shield-checkmark-outline";
+  let btnBg = "#3B82F6";
+
+  if (isVerified || verificationStatus === "approved" || verificationStatus === "verified") {
+    btnText = "Verified Seller Badge";
+    btnIcon = "shield-checkmark";
+    btnBg = "#10B981";
+  } else if (verificationStatus === "pending" || verificationStatus === "under_review") {
+    btnText = "Verification Under Review";
+    btnIcon = "time-outline";
+    btnBg = "#F59E0B";
+  } else if (verificationStatus === "rejected") {
+    btnText = "Verification Rejected • Re-apply";
+    btnIcon = "alert-circle-outline";
+    btnBg = "#EF4444";
+  } else {
+    btnText = "Apply for Store Verification";
+    btnIcon = "shield-checkmark-outline";
+    btnBg = "#3B82F6";
+  }
+
   return (
     <View
       style={[
@@ -42,11 +74,11 @@ export function SellerCtaCard({ isDark, hasStore, storeName, onPress, onVerifica
       {hasStore && onVerificationPress && (
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.verificationBtn, { backgroundColor: "#3B82F6" }]}
+            style={[styles.verificationBtn, { backgroundColor: btnBg }]}
             onPress={onVerificationPress}
           >
-            <Ionicons name="shield-checkmark-outline" size={16} color="#FFF" />
-            <ThemedText style={styles.verificationBtnText}>Continue Store Verification</ThemedText>
+            <Ionicons name={btnIcon} size={16} color="#FFF" />
+            <ThemedText style={styles.verificationBtnText}>{btnText}</ThemedText>
           </TouchableOpacity>
         </View>
       )}

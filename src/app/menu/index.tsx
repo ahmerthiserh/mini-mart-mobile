@@ -8,9 +8,10 @@ import {
   Switch,
   Appearance,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -87,28 +88,65 @@ export default function MenuScreen() {
   const { user, token, logout } = useAuth();
   const isLoggedIn = !!token;
   const [storeData, setStoreData] = React.useState<any>(null);
+  const [refreshing, setRefreshing] = React.useState(false);
 
-  React.useEffect(() => {
+  const fetchStoreData = React.useCallback(async () => {
     if (isLoggedIn && token) {
-      setStoreData(null);
-      fetch(api.ENDPOINTS.VENDOR.STORE, {
-        headers: api.getHeaders(token),
-      })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && data.id) {
-            setStoreData(data);
-          } else {
-            setStoreData(null);
+      try {
+        const [storeRes, verifRes] = await Promise.all([
+          fetch(api.ENDPOINTS.VENDOR.STORE, { headers: api.getHeaders(token) }),
+          fetch(api.ENDPOINTS.VENDOR.VERIFICATIONS, { headers: api.getHeaders(token) }),
+        ]);
+
+        let mergedData: any = {};
+
+        if (storeRes.ok) {
+          const sData = await storeRes.json();
+          if (sData && sData.id) {
+            mergedData = { ...sData };
           }
-        })
-        .catch(() => setStoreData(null));
+        }
+
+        if (verifRes.ok) {
+          const vData = await verifRes.json();
+          if (vData.requests && vData.requests.length > 0) {
+            const latestReq = vData.requests[0];
+            mergedData.verification_status = latestReq.status;
+            if (latestReq.status === "approved") {
+              mergedData.is_verified = true;
+            }
+          }
+          if (vData.seller) {
+            mergedData = { ...vData.seller, ...mergedData };
+          }
+        }
+
+        if (mergedData.id || mergedData.store_name || mergedData.verification_status) {
+          setStoreData(mergedData);
+        } else {
+          setStoreData(null);
+        }
+      } catch (err) {
+        setStoreData(null);
+      }
     } else {
       setStoreData(null);
     }
   }, [isLoggedIn, token]);
 
-  const hasStore = !!(storeData && storeData.id);
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchStoreData();
+    setRefreshing(false);
+  }, [fetchStoreData]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchStoreData();
+    }, [fetchStoreData])
+  );
+
+  const hasStore = !!(storeData && (storeData.id || storeData.store_name));
   const storeName = storeData?.store_name;
 
   const getInitials = (name: string) => {
@@ -162,6 +200,14 @@ export default function MenuScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[primaryColor]}
+            tintColor={primaryColor}
+          />
+        }
       >
         {/* PROFILE / GUEST HEADER */}
         <MenuHeader
@@ -182,6 +228,8 @@ export default function MenuScreen() {
             isDark={isDark}
             hasStore={hasStore}
             storeName={storeName}
+            isVerified={!!storeData?.is_verified}
+            verificationStatus={storeData?.verification_status}
             onPress={() => {
               if (hasStore) {
                 const slug = storeData?.seller_type_slug || "physical-business";
