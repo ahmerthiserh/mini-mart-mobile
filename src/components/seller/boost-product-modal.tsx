@@ -38,6 +38,7 @@ export function BoostProductModal({
   const [submitting, setSubmitting] = useState(false);
   const [packages, setPackages] = useState<any[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string>("Standard");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const modalBg = isDark ? "#1C1C1E" : "#FFFFFF";
   const borderColor = isDark ? "#2C2C2E" : "#E5E7EB";
@@ -45,6 +46,7 @@ export function BoostProductModal({
 
   useEffect(() => {
     if (visible) {
+      setErrorMessage(null);
       fetchPackages();
     }
   }, [visible]);
@@ -69,6 +71,7 @@ export function BoostProductModal({
   const handleConfirmBoost = async () => {
     if (!product) return;
     setSubmitting(true);
+    setErrorMessage(null);
     try {
       const res = await api.fetchWithTimeout(api.ENDPOINTS.VENDOR.BOOST_PRODUCT, {
         method: "POST",
@@ -79,17 +82,19 @@ export function BoostProductModal({
         }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        const data = await res.json();
         showToast(data.message || "Product boosted successfully!", "success");
         onSuccess();
         onClose();
       } else {
-        const errData = await res.json();
-        showToast(errData.message || "Failed to activate boost", "error");
+        const msg = data.message || "Failed to activate boost";
+        setErrorMessage(msg);
       }
     } catch (err) {
-      showToast("Network error boosting product", "error");
+      const netMsg = "Network error boosting product. Please try again.";
+      setErrorMessage(netMsg);
     } finally {
       setSubmitting(false);
     }
@@ -128,13 +133,27 @@ export function BoostProductModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
+            {/* HIGH-VISIBILITY ERROR ALERT BANNER */}
+            {errorMessage && (
+              <View style={styles.errorAlertBox}>
+                <Ionicons name="alert-circle" size={24} color="#DC2626" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.errorAlertTitle}>Slot Requirement Not Met</Text>
+                  <Text style={styles.errorAlertText}>{errorMessage}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setErrorMessage(null)} style={{ padding: 2 }}>
+                  <Ionicons name="close" size={18} color="#DC2626" />
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* VALUE BANNER */}
             <View style={styles.valueBanner}>
               <Ionicons name="trending-up" size={20} color="#0284C7" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.valueBannerTitle}>Get Up to 5x More Buyers</Text>
                 <Text style={styles.valueBannerSub}>
-                  Boosted products get top placement on discovery feeds and category searches.
+                  Boosted products get top placement on discovery feeds and search results.
                 </Text>
               </View>
             </View>
@@ -163,7 +182,10 @@ export function BoostProductModal({
                           borderWidth: isSelected ? 2 : 1,
                         },
                       ]}
-                      onPress={() => setSelectedPackage(pkg.name)}
+                      onPress={() => {
+                        setSelectedPackage(pkg.name);
+                        setErrorMessage(null);
+                      }}
                     >
                       {pkg.is_popular && (
                         <View style={styles.popularTag}>
@@ -181,7 +203,9 @@ export function BoostProductModal({
                           </Text>
                           <Text style={styles.pkgDesc}>{pkg.description}</Text>
                         </View>
-                        <Text style={styles.pkgPrice}>₦{pkg.price.toLocaleString()}</Text>
+                        <Text style={styles.pkgSlots}>
+                          ⚡ {pkg.slots || 1} {pkg.slots === 1 ? "Slot" : "Slots"}
+                        </Text>
                       </View>
                     </TouchableOpacity>
                   );
@@ -193,7 +217,7 @@ export function BoostProductModal({
             <View style={[styles.analyticsNotice, { borderColor }]}>
               <Ionicons name="bar-chart" size={16} color="#10B981" />
               <Text style={styles.analyticsNoticeText}>
-                Includes live stats: track impressions, product clicks, and WhatsApp leads.
+                Includes live stats: track impressions, product clicks, and leads.
               </Text>
             </View>
           </ScrollView>
@@ -258,6 +282,27 @@ const styles = StyleSheet.create({
   scrollBody: {
     paddingVertical: 16,
     gap: 16,
+  },
+  errorAlertBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1.5,
+    borderColor: "#FCA5A5",
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+  },
+  errorAlertTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#991B1B",
+  },
+  errorAlertText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#B91C1C",
+    marginTop: 2,
   },
   valueBanner: {
     flexDirection: "row",
@@ -333,10 +378,14 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
     marginTop: 2,
   },
-  pkgPrice: {
-    fontSize: 15,
+  pkgSlots: {
+    fontSize: 13,
     fontWeight: "800",
-    color: "#10B981",
+    color: "#F59E0B",
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   analyticsNotice: {
     flexDirection: "row",
