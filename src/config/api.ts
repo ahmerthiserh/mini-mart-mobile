@@ -1,11 +1,25 @@
 // Toggle to true for local testing, or set EXPO_PUBLIC_API_URL in .env
 const USE_LOCAL_API = true;
 
-// Use your computer's local Wi-Fi IP (192.168.0.4) or localhost (when running `adb reverse tcp:8000 tcp:8000`)
-const LOCAL_API_URL = 'http://localhost:8000/api';
+// Machine Wi-Fi IP: 192.168.0.4 (works for real devices, emulators, and web)
+const LOCAL_API_URL = 'http://192.168.0.4:8000/api';
 const PROD_API_URL = 'https://minimart.vetristech.com/api';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || (USE_LOCAL_API ? LOCAL_API_URL : PROD_API_URL);
+
+/**
+ * Fetch helper with automatic 10s timeout to prevent infinite loading screens
+ */
+export const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 10000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 export const API_ENDPOINTS = {
   // Authentication & Profile
@@ -117,4 +131,5 @@ export default {
   BASE_URL: API_BASE_URL,
   ENDPOINTS: API_ENDPOINTS,
   getHeaders,
+  fetchWithTimeout,
 };

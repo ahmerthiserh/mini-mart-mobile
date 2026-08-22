@@ -4,8 +4,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { useAlert } from '@/context/AlertContext';
 import api from '@/config/api';
-import { ActivityIndicator, Alert, Modal, FlatList } from 'react-native';
+import { ActivityIndicator, Modal, FlatList } from 'react-native';
 
 const NIGERIA_STATES = [
   'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 
@@ -22,6 +23,7 @@ export default function EditAddressScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { token } = useAuth();
+  const { showAlert } = useAlert();
   
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -82,9 +84,14 @@ export default function EditAddressScreen() {
       });
 
       if (response.ok) {
-        Alert.alert('Success', 'Address updated successfully.', [
-          { text: 'OK', onPress: () => router.back() }
-        ]);
+        showAlert({
+          title: 'Success',
+          message: 'Address updated successfully.',
+          iconName: 'checkmark-circle-outline',
+          iconColor: '#10B981',
+          confirmText: 'OK',
+          onConfirm: () => router.back(),
+        });
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Failed to update address');
@@ -97,30 +104,34 @@ export default function EditAddressScreen() {
   };
 
   const handleDelete = async () => {
-    Alert.alert('Delete Address', 'Are you sure you want to remove this address?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          if (!token || !id) return;
-          setIsSubmitting(true);
-          try {
-            const response = await fetch(api.ENDPOINTS.SHIPPING_ADDRESS(id as string), {
-              method: 'DELETE',
-              headers: api.getHeaders(token),
-            });
-            if (response.ok) {
-              router.back();
-            } else {
-              Alert.alert('Error', 'Failed to delete address');
-            }
-          } catch (err) {
-            Alert.alert('Error', 'Network error');
-          } finally {
-            setIsSubmitting(false);
+    showAlert({
+      title: 'Delete Address',
+      message: 'Are you sure you want to remove this address?',
+      iconName: 'trash-outline',
+      iconColor: '#EF4444',
+      confirmText: 'Delete',
+      confirmBtnColor: '#EF4444',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        if (!token || !id) return;
+        setIsSubmitting(true);
+        try {
+          const response = await fetch(api.ENDPOINTS.SHIPPING_ADDRESS(id as string), {
+            method: 'DELETE',
+            headers: api.getHeaders(token),
+          });
+          if (response.ok) {
+            router.back();
+          } else {
+            showAlert({ title: 'Error', message: 'Failed to delete address', iconName: 'alert-circle-outline', iconColor: '#EF4444' });
           }
+        } catch (err) {
+          showAlert({ title: 'Error', message: 'Network error', iconName: 'alert-circle-outline', iconColor: '#EF4444' });
+        } finally {
+          setIsSubmitting(false);
         }
-      }
-    ]);
+      },
+    });
   };
   
   if (isLoading) {

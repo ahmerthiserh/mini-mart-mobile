@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useAlert } from "@/context/AlertContext";
 import api from "@/config/api";
 
 export type SellerTypeItem = {
@@ -51,6 +52,7 @@ function mapSellerTypeMeta(slug: string, rawIcon?: string) {
 export default function SelectSellerTypeScreen() {
   const router = useRouter();
   const isDark = useColorScheme() === "dark";
+  const { showAlert } = useAlert();
   const [typesList, setTypesList] = useState<SellerTypeItem[]>([]);
   const [selectedTypeSlug, setSelectedTypeSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +105,13 @@ export default function SelectSellerTypeScreen() {
 
   const handleContinue = () => {
     if (!selectedType) {
-      Alert.alert("Selection Required", "Please choose a business type to proceed.");
+      showAlert({
+        title: "Selection Required",
+        message: "Please choose a business type to proceed.",
+        iconName: "business-outline",
+        iconColor: "#3B82F6",
+        confirmText: "OK",
+      });
       return;
     }
     router.push({

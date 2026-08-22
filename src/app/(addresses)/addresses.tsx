@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { StyleSheet, ScrollView, View, useColorScheme, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, ScrollView, View, useColorScheme, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/context/AuthContext';
+import { useAlert } from '@/context/AlertContext';
 import api from '@/config/api';
 
 export default function AddressesScreen() {
@@ -13,36 +14,35 @@ export default function AddressesScreen() {
   const cardBg = isDark ? '#141414' : '#FFFFFF';
   const borderColor = isDark ? '#2A2A2A' : '#EAEAEA';
   const { token } = useAuth();
+  const { showAlert } = useAlert();
   const [addresses, setAddresses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleDeleteAddress = async (addressId: number) => {
-    Alert.alert(
-      'Delete Address',
-      'Are you sure you want to delete this shipping address?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await fetch(api.ENDPOINTS.SHIPPING_ADDRESS(addressId), {
-                method: 'DELETE',
-                headers: api.getHeaders(token),
-              });
-              if (res.ok) {
-                fetchAddresses();
-              } else {
-                Alert.alert('Error', 'Failed to delete address.');
-              }
-            } catch (error) {
-              console.error('Failed to delete address:', error);
-            }
+  const handleDeleteAddress = (addressId: number) => {
+    showAlert({
+      title: 'Delete Address',
+      message: 'Are you sure you want to delete this shipping address?',
+      iconName: 'trash-outline',
+      iconColor: '#EF4444',
+      confirmText: 'Delete',
+      confirmBtnColor: '#EF4444',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(api.ENDPOINTS.SHIPPING_ADDRESS(addressId), {
+            method: 'DELETE',
+            headers: api.getHeaders(token),
+          });
+          if (res.ok) {
+            fetchAddresses();
+          } else {
+            showAlert({ title: 'Error', message: 'Failed to delete address.', iconName: 'alert-circle-outline', iconColor: '#EF4444' });
           }
+        } catch (error) {
+          console.error('Failed to delete address:', error);
         }
-      ]
-    );
+      },
+    });
   };
 
   const fetchAddresses = async () => {

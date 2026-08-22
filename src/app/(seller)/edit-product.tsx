@@ -29,20 +29,18 @@ const STATUS_OPTIONS = [
   { label: "Draft", value: "draft", color: "#F59E0B" },
 ];
 
-export default function AddProductScreen() {
+export default function EditProductScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ productId?: string }>();
-  const productId = params.productId;
-  const isEditing = Boolean(productId);
+  const params = useLocalSearchParams<{ productId?: string; id?: string }>();
+  const productId = params.productId || params.id;
 
   const isDark = useColorScheme() === "dark";
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const { showToast } = useToast();
-  const { showAlert } = useAlert();
 
   const [loading, setLoading] = useState(false);
-  const [fetchingProduct, setFetchingProduct] = useState(isEditing);
+  const [fetchingProduct, setFetchingProduct] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [catSearchQuery, setCatSearchQuery] = useState("");
@@ -59,7 +57,7 @@ export default function AddProductScreen() {
   const [quantity, setQuantity] = useState("10");
   const [unit, setUnit] = useState("");
   const [status, setStatus] = useState<"published" | "draft">("published");
-  const [images, setImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [newImages, setNewImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [existingImages, setExistingImages] = useState<any[]>([]);
   const [removeImages, setRemoveImages] = useState<number[]>([]);
 
@@ -69,7 +67,7 @@ export default function AddProductScreen() {
   const primaryColor = "#0284C7";
 
   useEffect(() => {
-    // Fetch available categories
+    // Fetch categories
     fetch(api.ENDPOINTS.CATEGORIES)
       .then((res) => res.json())
       .then((data) => {
@@ -79,13 +77,10 @@ export default function AddProductScreen() {
           ? data.data
           : [];
         setCategories(catList);
-        if (catList.length > 0 && !categoryId && !isEditing) {
-          setCategoryId(catList[0].id);
-        }
       })
       .catch((err) => console.error("Error fetching categories:", err));
 
-    // Fetch measurement units from database table
+    // Fetch measurement units
     fetch(api.ENDPOINTS.MEASUREMENT_UNITS)
       .then((res) => res.json())
       .then((data) => {
@@ -99,23 +94,20 @@ export default function AddProductScreen() {
             typeof u === "string" ? u : u.name || u.slug
           );
           setUnitsList(unitNames);
-          if (unitNames.length > 0 && !isEditing) {
-            setUnit(unitNames[0]);
-          }
         }
       })
       .catch((err) => console.error("Error fetching measurement units:", err));
   }, []);
 
-  // Fetch Product Details for Edit Mode
+  // Fetch Product Details for Edit
   useEffect(() => {
     if (productId && token) {
       setFetchingProduct(true);
-      fetch(api.ENDPOINTS.VENDOR.PRODUCT_DETAILS(productId), {
+      api.fetchWithTimeout(api.ENDPOINTS.VENDOR.PRODUCT_DETAILS(productId), {
         headers: api.getHeaders(token),
       })
-        .then((res) => res.json())
-        .then((data) => {
+        .then((res: Response) => res.json())
+        .then((data: any) => {
           if (data) {
             setName(data.name || "");
             setCategoryId(
@@ -135,11 +127,13 @@ export default function AddProductScreen() {
             }
           }
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.error("Error fetching product for edit:", err);
           showToast("Failed to load product details", "error");
         })
         .finally(() => setFetchingProduct(false));
+    } else {
+      setFetchingProduct(false);
     }
   }, [productId, token]);
 
@@ -157,7 +151,7 @@ export default function AddProductScreen() {
     u.toLowerCase().includes(unitSearchQuery.toLowerCase())
   );
 
-  const totalImageCount = existingImages.length + images.length;
+  const totalImageCount = existingImages.length + newImages.length;
 
   const handlePickImage = async () => {
     if (totalImageCount >= 5) {
@@ -179,12 +173,12 @@ export default function AddProductScreen() {
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImages((prev) => [...prev, ...result.assets]);
+      setNewImages((prev) => [...prev, ...result.assets]);
     }
   };
 
   const handleRemoveNewImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleRemoveExistingImage = (id: number) => {
@@ -201,14 +195,16 @@ export default function AddProductScreen() {
       showToast("Valid base price is required", "error");
       return;
     }
+    if (!productId) {
+      showToast("Product ID missing", "error");
+      return;
+    }
 
     setLoading(true);
 
     try {
       const formData = new FormData();
-      if (isEditing) {
-        formData.append("_method", "PUT");
-      }
+      formData.append("_method", "PUT");
       formData.append("name", String(name).trim());
       formData.append(
         "category_id",
@@ -227,8 +223,8 @@ export default function AddProductScreen() {
         });
       }
 
-      if (images && images.length > 0) {
-        images.forEach((img: any, idx: number) => {
+      if (newImages && newImages.length > 0) {
+        newImages.forEach((img: any, idx: number) => {
           const rawUri = typeof img === "string" ? img : img?.uri;
           if (!rawUri || typeof rawUri !== "string") return;
 
@@ -265,14 +261,10 @@ export default function AddProductScreen() {
         });
       }
 
-      const endpoint = isEditing
-        ? api.ENDPOINTS.VENDOR.PRODUCT_DETAILS(productId!)
-        : api.ENDPOINTS.VENDOR.PRODUCTS;
-
       const res = await new Promise<{ ok: boolean; status: number; data: any }>(
         (resolve, reject) => {
           const xhr = new XMLHttpRequest();
-          xhr.open("POST", endpoint);
+          xhr.open("POST", api.ENDPOINTS.VENDOR.PRODUCT_DETAILS(productId));
           xhr.setRequestHeader("Accept", "application/json");
           if (token) {
             xhr.setRequestHeader("Authorization", `Bearer ${token}`);
@@ -282,9 +274,7 @@ export default function AddProductScreen() {
             let data: any = {};
             try {
               data = JSON.parse(xhr.responseText);
-            } catch (e) {
-              console.warn("XHR response not JSON:", xhr.responseText);
-            }
+            } catch (e) {}
             resolve({
               ok: xhr.status >= 200 && xhr.status < 300,
               status: xhr.status,
@@ -292,52 +282,26 @@ export default function AddProductScreen() {
             });
           };
 
-          xhr.onerror = () => reject(new Error("Network error submitting product"));
-          xhr.ontimeout = () =>
-            reject(new Error("Request timeout submitting product"));
+          xhr.onerror = () => reject(new Error("Network error updating product"));
           xhr.send(formData);
         }
       );
 
-      const { ok, status: statusCode, data } = res;
-
-      if (ok) {
-        showToast(
-          isEditing ? "Product updated successfully!" : "Product uploaded successfully!",
-          "success"
-        );
+      if (res.ok) {
+        showToast("Product updated successfully!", "success");
         router.replace("/(seller)/manage-store" as any);
       } else {
-        if (
-          statusCode === 422 &&
-          data.message?.includes("upload limit reached")
-        ) {
-          showAlert({
-            title: "Upload Limit Reached",
-            message: data.message,
-            iconName: "cube-outline",
-            iconColor: "#0284C7",
-            confirmText: "Buy Slots",
-            confirmBtnColor: "#0284C7",
-            cancelText: "Cancel",
-            onConfirm: () => router.push("/(seller)/buy-slots" as any),
-          });
-        } else {
-          const errMsg =
-            data.message ||
-            (data.errors ? Object.values(data.errors).flat().join(", ") : null) ||
-            `Server Error (${statusCode})`;
-          showToast(errMsg, "error");
-        }
+        const errMsg =
+          res.data.message ||
+          (res.data.errors
+            ? Object.values(res.data.errors).flat().join(", ")
+            : null) ||
+          `Server Error (${res.status})`;
+        showToast(errMsg, "error");
       }
     } catch (err: any) {
-      console.error("Product submit exception:", err);
-      showToast(
-        err?.message
-          ? `Error: ${err.message}`
-          : "Network error submitting product",
-        "error"
-      );
+      console.error("Product update exception:", err);
+      showToast(err?.message ? `Error: ${err.message}` : "Network error updating product", "error");
     } finally {
       setLoading(false);
     }
@@ -364,17 +328,12 @@ export default function AddProductScreen() {
         ]}
       >
         <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
-          <ThemedText style={styles.sectionTitle}>
-            {isEditing ? "Edit Product" : "Add New Product"}
-          </ThemedText>
+          <ThemedText style={styles.sectionTitle}>Edit Product</ThemedText>
 
-          {/* PRODUCT IMAGES SECTION */}
+          {/* PRODUCT IMAGES */}
           <View style={styles.fieldGroup}>
-            <ThemedText style={styles.label}>
-              Product Images (up to 5) {!isEditing && <Text style={styles.requiredAsterisk}>*</Text>}
-            </ThemedText>
+            <ThemedText style={styles.label}>Product Images (up to 5)</ThemedText>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageRow}>
-              {/* Existing Server Images */}
               {existingImages.map((img) => (
                 <View key={`existing-${img.id}`} style={styles.imagePreviewContainer}>
                   <Image source={{ uri: img.image_url }} style={styles.imagePreview} />
@@ -387,8 +346,7 @@ export default function AddProductScreen() {
                 </View>
               ))}
 
-              {/* Newly Picked Gallery Images */}
-              {images.map((img, index) => (
+              {newImages.map((img, index) => (
                 <View key={`new-${index}`} style={styles.imagePreviewContainer}>
                   <Image source={{ uri: img.uri }} style={styles.imagePreview} />
                   <TouchableOpacity
@@ -430,7 +388,7 @@ export default function AddProductScreen() {
             />
           </View>
 
-          {/* Category Selector */}
+          {/* Category */}
           <View style={styles.fieldGroup}>
             <ThemedText style={styles.label}>
               Category <Text style={styles.requiredAsterisk}>*</Text>
@@ -452,7 +410,7 @@ export default function AddProductScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Price & Quantity Row */}
+          {/* Price & Quantity */}
           <View style={styles.row}>
             <View style={[styles.fieldGroup, { flex: 1 }]}>
               <ThemedText style={styles.label}>
@@ -487,7 +445,7 @@ export default function AddProductScreen() {
             </View>
           </View>
 
-          {/* Unit & Status Row */}
+          {/* Unit & Status */}
           <View style={styles.row}>
             <View style={[styles.fieldGroup, { flex: 1 }]}>
               <ThemedText style={styles.label}>Measurement Unit</ThemedText>
@@ -519,10 +477,7 @@ export default function AddProductScreen() {
                   style={[
                     styles.pickerInputText,
                     {
-                      color:
-                        status === "published"
-                          ? "#10B981"
-                          : "#F59E0B",
+                      color: status === "published" ? "#10B981" : "#F59E0B",
                       fontWeight: "700",
                     },
                   ]}
@@ -552,7 +507,7 @@ export default function AddProductScreen() {
             />
           </View>
 
-          {/* SUBMIT BUTTON */}
+          {/* SAVE BUTTON */}
           <TouchableOpacity
             activeOpacity={0.85}
             style={[
@@ -567,17 +522,15 @@ export default function AddProductScreen() {
               <ActivityIndicator color="#FFF" />
             ) : (
               <>
-                <Ionicons name={isEditing ? "checkmark-sharp" : "cloud-upload-outline"} size={20} color="#FFF" />
-                <Text style={styles.submitBtnText}>
-                  {isEditing ? "Save Changes" : "Upload Product"}
-                </Text>
+                <Ionicons name="checkmark-sharp" size={20} color="#FFF" />
+                <Text style={styles.submitBtnText}>Save Changes</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* CATEGORY SELECTION MODAL */}
+      {/* CATEGORY MODAL */}
       <Modal
         visible={categoryModalVisible}
         animationType="slide"
@@ -636,7 +589,7 @@ export default function AddProductScreen() {
         </View>
       </Modal>
 
-      {/* MEASUREMENT UNIT SELECTION MODAL */}
+      {/* UNIT MODAL */}
       <Modal
         visible={unitModalVisible}
         animationType="slide"
@@ -695,7 +648,7 @@ export default function AddProductScreen() {
         </View>
       </Modal>
 
-      {/* STATUS SELECTION MODAL */}
+      {/* STATUS MODAL */}
       <Modal
         visible={statusModalVisible}
         animationType="slide"

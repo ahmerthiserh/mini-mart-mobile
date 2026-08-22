@@ -91,5 +91,6 @@ export const HIDDEN_ROUTES: HiddenRoute[] = [
   { name: "(seller)/verification", title: "Seller Verification", backHref: "/menu" },
   { name: "(seller)/buy-slots", title: "Buy Product Slots", backHref: "/(seller)/manage-store" },
   { name: "(seller)/add-product", title: "Add New Product", backHref: "/(seller)/manage-store" },
+  { name: "(seller)/edit-product", title: "Edit Product", backHref: "/(seller)/manage-store" },
   { name: "(seller)/store-profile", title: "Store Profile", backHref: "/menu" },
 ];

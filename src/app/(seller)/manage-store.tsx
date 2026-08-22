@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -7,10 +7,7 @@ import {
   useColorScheme,
   ActivityIndicator,
   RefreshControl,
-  Text,
-  Image,
   TextInput,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -20,23 +17,30 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useAlert } from "@/context/AlertContext";
 import { Colors } from "@/constants/Colors";
 import api from "@/config/api";
+
+// Extracted Sub-Components
+import { StoreIncompleteBanner } from "@/components/seller/store-incomplete-banner";
+import { SlotBanner } from "@/components/seller/slot-banner";
+import { SellerProductCard } from "@/components/seller/seller-product-card";
 
 export default function SellerProductsScreen() {
   const router = useRouter();
   const isDark = useColorScheme() === "dark";
   const insets = useSafeAreaInsets();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const { showToast } = useToast();
+  const { showAlert } = useAlert();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [slotInfo, setSlotInfo] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [storeInfo, setStoreInfo] = useState<any>(null);
 
-  const cardBg = isDark ? "#1C1C1E" : "#FFFFFF";
   const borderColor = isDark ? "#2C2C2E" : "#EAEAEA";
   const primaryColor = Colors[isDark ? "dark" : "light"].primary;
 
@@ -48,14 +52,15 @@ export default function SellerProductsScreen() {
       }
 
       try {
-        let url = `${api.ENDPOINTS.VENDOR.PRODUCTS}`;
+        let url = `${api.ENDPOINTS.VENDOR.PRODUCTS}?per_page=50`;
         if (search) {
-          url += `?search=${encodeURIComponent(search)}`;
+          url += `&search=${encodeURIComponent(search)}`;
         }
 
-        const res = await fetch(url, {
-          headers: api.getHeaders(token),
-        });
+        const [res, storeRes] = await Promise.all([
+          api.fetchWithTimeout(url, { headers: api.getHeaders(token) }),
+          api.fetchWithTimeout(api.ENDPOINTS.VENDOR.STORE, { headers: api.getHeaders(token) }),
+        ]);
 
         if (res.ok) {
           const data = await res.json();
@@ -70,6 +75,11 @@ export default function SellerProductsScreen() {
         } else {
           showToast("Unable to load seller products", "error");
         }
+
+        if (storeRes.ok) {
+          const storeData = await storeRes.json();
+          setStoreInfo(storeData);
+        }
       } catch (err) {
         console.error("Error fetching vendor products:", err);
       } finally {
@@ -77,7 +87,7 @@ export default function SellerProductsScreen() {
         setRefreshing(false);
       }
     },
-    [token]
+    [token, showToast]
   );
 
   // Re-fetch product and slot data whenever screen comes into focus
@@ -93,39 +103,53 @@ export default function SellerProductsScreen() {
   };
 
   const handleDeleteProduct = (productId: number, productName: string) => {
-    Alert.alert(
-      "Delete Product",
-      `Are you sure you want to delete "${productName}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const res = await fetch(
-                api.ENDPOINTS.VENDOR.PRODUCT_DETAILS(productId),
-                {
-                  method: "DELETE",
-                  headers: api.getHeaders(token),
-                }
-              );
-              if (res.ok) {
-                showToast("Product deleted successfully", "success");
-                fetchVendorProducts(searchQuery);
-              } else {
-                showToast("Failed to delete product", "error");
-              }
-            } catch (err) {
-              showToast("Network error deleting product", "error");
+    showAlert({
+      title: "Delete Product",
+      message: `Are you sure you want to delete "${productName}"? This action cannot be undone.`,
+      iconName: "trash-outline",
+      iconColor: "#EF4444",
+      confirmText: "Delete",
+      confirmBtnColor: "#EF4444",
+      cancelText: "Cancel",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(
+            api.ENDPOINTS.VENDOR.PRODUCT_DETAILS(productId),
+            {
+              method: "DELETE",
+              headers: api.getHeaders(token),
             }
-          },
-        },
-      ]
-    );
+          );
+          if (res.ok) {
+            showToast("Product deleted successfully", "success");
+            fetchVendorProducts(searchQuery);
+          } else {
+            showToast("Failed to delete product", "error");
+          }
+        } catch (err) {
+          showToast("Network error deleting product", "error");
+        }
+      },
+    });
   };
 
   const handleAddProduct = () => {
+    if (storeInfo && !storeInfo.logo) {
+      showAlert({
+        title: "Store Logo Required",
+        message: "Please set up your store profile (at least your store logo / profile picture) before uploading products.",
+        iconName: "image-outline",
+        iconColor: "#D97706",
+        confirmText: "Setup Profile",
+        confirmBtnColor: "#D97706",
+        cancelText: "Cancel",
+        onConfirm: () => {
+          router.push("/(seller)/store-profile" as any);
+        },
+      });
+      return;
+    }
+
     const available = slotInfo?.available_slots;
     const hasAvailable = slotInfo
       ? slotInfo.has_available_slot !== undefined
@@ -134,17 +158,18 @@ export default function SellerProductsScreen() {
       : true;
 
     if (!hasAvailable) {
-      Alert.alert(
-        "No Slots Available",
-        "You have reached your product upload limit. Please buy additional product slots to list new products.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Buy Slots",
-            onPress: () => router.push("/(seller)/buy-slots" as any),
-          },
-        ]
-      );
+      showAlert({
+        title: "No Slots Available",
+        message: "You have reached your product upload limit. Please buy additional product slots to list new products.",
+        iconName: "cube-outline",
+        iconColor: "#0284C7",
+        confirmText: "Buy Slots",
+        confirmBtnColor: "#0284C7",
+        cancelText: "Cancel",
+        onConfirm: () => {
+          router.push("/(seller)/buy-slots" as any);
+        },
+      });
     } else {
       router.push("/(seller)/add-product" as any);
     }
@@ -156,7 +181,7 @@ export default function SellerProductsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom + 90, 120) },
+          { paddingBottom: Math.max(insets.bottom + 120, 150) },
         ]}
         refreshControl={
           <RefreshControl
@@ -167,52 +192,19 @@ export default function SellerProductsScreen() {
           />
         }
       >
-        {/* SLOT USAGE BADGE & ACTIONS */}
-        {slotInfo && (
-          <View
-            style={[
-              styles.slotBanner,
-              {
-                backgroundColor: isDark ? "#1E293B" : "#F0F7FF",
-                borderColor: isDark ? "#334155" : "#BAE6FD",
-              },
-            ]}
-          >
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <ThemedText style={styles.slotTitle}>Product Slots</ThemedText>
-                <View style={styles.slotBadge}>
-                  <Text style={styles.slotBadgeText}>
-                    {slotInfo.available_slots ?? "∞"} Available
-                  </Text>
-                </View>
-              </View>
-              <ThemedText style={styles.slotSub}>
-                {slotInfo.used_slots ?? 0} of {slotInfo.total_slots ?? "Unlimited"} slots used
-              </ThemedText>
-            </View>
-
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[styles.actionBtn, { backgroundColor: "#0284C7" }]}
-                onPress={handleAddProduct}
-              >
-                <Ionicons name="add-circle-outline" size={15} color="#FFF" />
-                <Text style={styles.actionBtnText}>Add Product</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[styles.actionBtn, { backgroundColor: "#10B981" }]}
-                onPress={() => router.push("/(seller)/buy-slots" as any)}
-              >
-                <Ionicons name="cart-outline" size={15} color="#FFF" />
-                <Text style={styles.actionBtnText}>Buy Slots</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        {/* INCOMPLETE PROFILE BANNER */}
+        {storeInfo && !storeInfo.logo && (
+          <StoreIncompleteBanner
+            onSetupProfile={() => router.push("/(seller)/store-profile" as any)}
+          />
         )}
+
+        {/* SLOT USAGE BADGE & ACTIONS */}
+        <SlotBanner
+          slotInfo={slotInfo}
+          onAddProduct={handleAddProduct}
+          onBuySlots={() => router.push("/(seller)/buy-slots" as any)}
+        />
 
         {/* SEARCH BAR */}
         <View
@@ -265,79 +257,24 @@ export default function SellerProductsScreen() {
             </ThemedText>
           </View>
         ) : (
-          /* PRODUCT LIST */
-          products.map((item) => {
-            const primaryImg =
-              item.images && item.images.length > 0
-                ? item.images.find((img: any) => img.is_primary)?.image_url ||
-                  item.images[0].image_url
-                : null;
-
-            const isPublished = item.status === "published";
-
-            return (
-              <View
+          /* 2 IN A ROW GRID PRODUCT LIST */
+          <View style={styles.productGrid}>
+            {products.map((item) => (
+              <SellerProductCard
                 key={item.id}
-                style={[
-                  styles.productCard,
-                  { backgroundColor: cardBg, borderColor },
-                ]}
-              >
-                {primaryImg ? (
-                  <Image source={{ uri: primaryImg }} style={styles.productThumb} />
-                ) : (
-                  <View style={[styles.productThumb, styles.noThumb]}>
-                    <Ionicons name="image-outline" size={24} color="#8E8E93" />
-                  </View>
-                )}
-
-                <View style={styles.productDetails}>
-                  <View style={styles.titleRow}>
-                    <ThemedText style={styles.productName} numberOfLines={1}>
-                      {item.name}
-                    </ThemedText>
-                    <View
-                      style={[
-                        styles.statusTag,
-                        {
-                          backgroundColor: isPublished
-                            ? "#10B98120"
-                            : "#F59E0B20",
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusTagText,
-                          { color: isPublished ? "#10B981" : "#F59E0B" },
-                        ]}
-                      >
-                        {isPublished ? "Published" : "Draft"}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <ThemedText style={[styles.productPrice, { color: primaryColor }]}>
-                    ₦{Number(item.base_price).toLocaleString()}
-                    {item.measurement_unit ? ` / ${item.measurement_unit}` : ""}
-                  </ThemedText>
-
-                  <View style={styles.metaRow}>
-                    <Text style={styles.metaText}>
-                      Category: {item.category?.name || "General"}
-                    </Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => handleDeleteProduct(item.id, item.name)}
-                >
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-            );
-          })
+                item={item}
+                primaryColor={primaryColor}
+                onEdit={() =>
+                  router.push({
+                    pathname: "/(seller)/edit-product",
+                    params: { productId: String(item.id) },
+                  } as any)
+                }
+                onDelete={() => handleDeleteProduct(item.id, item.name)}
+                onStatusChange={() => fetchVendorProducts(searchQuery)}
+              />
+            ))}
+          </View>
         )}
       </ScrollView>
 
@@ -364,46 +301,11 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 14,
   },
-  slotBanner: {
+  productGrid: {
     flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 10,
-  },
-  slotTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  slotSub: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 2,
-  },
-  slotBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 14,
-    backgroundColor: "#0284C7",
-  },
-  slotBadgeText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 11,
-  },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
-    gap: 4,
-  },
-  actionBtnText: {
-    color: "#FFF",
-    fontWeight: "700",
-    fontSize: 11,
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
   },
   fab: {
     position: "absolute",
@@ -452,63 +354,5 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     textAlign: "center",
     paddingHorizontal: 32,
-  },
-  productCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
-  },
-  productThumb: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-  },
-  noThumb: {
-    backgroundColor: "#F2F2F7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  productDetails: {
-    flex: 1,
-    gap: 4,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 6,
-  },
-  productName: {
-    fontSize: 15,
-    fontWeight: "700",
-    flex: 1,
-  },
-  statusTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  statusTagText: {
-    fontSize: 10,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  productPrice: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  metaText: {
-    fontSize: 11,
-    color: "#8E8E93",
-  },
-  deleteBtn: {
-    padding: 8,
   },
 });

@@ -7,6 +7,7 @@ import AppTabs from '@/components/app-tabs';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { ToastProvider } from '@/context/ToastContext';
+import { AlertProvider } from '@/context/AlertContext';
 
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { ForceUpdateChecker } from '@/components/force-update-checker';
@@ -31,11 +32,13 @@ export default function TabLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <ToastProvider>
-        <AuthProvider>
-          <CartProvider>
-            <MainApp />
-          </CartProvider>
-        </AuthProvider>
+        <AlertProvider>
+          <AuthProvider>
+            <CartProvider>
+              <MainApp />
+            </CartProvider>
+          </AuthProvider>
+        </AlertProvider>
       </ToastProvider>
     </ThemeProvider>
   );

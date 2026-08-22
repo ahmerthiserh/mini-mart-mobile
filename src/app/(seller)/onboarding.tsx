@@ -18,6 +18,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useAlert } from "@/context/AlertContext";
 import { WhatsAppAntiScamBanner } from "@/components/whatsapp-anti-scam-banner";
 import api from "@/config/api";
 
@@ -35,6 +36,7 @@ export default function SellerOnboardingScreen() {
   const isDark = useColorScheme() === "dark";
   const { user, token } = useAuth();
   const { showToast } = useToast();
+  const { showAlert } = useAlert();
 
   const typeSlug = (params.typeSlug || "physical-business").toLowerCase();
   const typeName = params.typeName || "Physical Business";
@@ -117,23 +119,23 @@ export default function SellerOnboardingScreen() {
 
   const handleSubmit = async () => {
     if (!storeName.trim()) {
-      Alert.alert("Required Field", "Please enter your store or profile name.");
+      showAlert({ title: "Required Field", message: "Please enter your store or profile name.", iconName: "alert-circle-outline", iconColor: "#EAB308", confirmText: "OK" });
       return;
     }
     if (!phone.trim()) {
-      Alert.alert("Required Field", "Please enter a valid mobile phone number.");
+      showAlert({ title: "Required Field", message: "Please enter a valid mobile phone number.", iconName: "alert-circle-outline", iconColor: "#EAB308", confirmText: "OK" });
       return;
     }
     if (isWhatsAppSeller && !whatsappNumber.trim()) {
-      Alert.alert("Required Field", "Please enter your active WhatsApp Business number.");
+      showAlert({ title: "Required Field", message: "Please enter your active WhatsApp Business number.", iconName: "alert-circle-outline", iconColor: "#EAB308", confirmText: "OK" });
       return;
     }
     if (isPhysicalSeller && (!address.trim() || !marketLocation.trim())) {
-      Alert.alert("Required Field", "Physical businesses require Market Name and Shop/Suite Number.");
+      showAlert({ title: "Required Field", message: "Physical businesses require Market Name and Shop/Suite Number.", iconName: "alert-circle-outline", iconColor: "#EAB308", confirmText: "OK" });
       return;
     }
     if (isDigitalMarketer && !socialHandle.trim()) {
-      Alert.alert("Required Field", "Digital marketers require a social media handle or portfolio link.");
+      showAlert({ title: "Required Field", message: "Digital marketers require a social media handle or portfolio link.", iconName: "alert-circle-outline", iconColor: "#EAB308", confirmText: "OK" });
       return;
     }
 
