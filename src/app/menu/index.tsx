@@ -203,7 +203,9 @@ export default function MenuScreen() {
     (Array.isArray(user?.permissions) && user.permissions.includes("manage products"))
   );
 
-  const displayMenuItems = MENU_ITEMS;
+  const displayMenuItems = isLoggedIn
+    ? MENU_ITEMS
+    : MENU_ITEMS.filter((item) => !item.authRequired);
 
   return (
     <ThemedView style={styles.container}>

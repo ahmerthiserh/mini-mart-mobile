@@ -5,43 +5,68 @@ import {
   View,
   TouchableOpacity,
   useColorScheme,
-  TextInput,
   Linking,
   Alert,
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { useAuth } from "@/context/AuthContext";
+import { Colors } from "@/constants/Colors";
 import api from "@/config/api";
 
+interface WhatsAppContact {
+  title: string;
+  phone: string;
+}
+
 export default function SupportScreen() {
+  const router = useRouter();
   const isDark = useColorScheme() === "dark";
-  const cardBg = isDark ? "#141414" : "#FFFFFF";
-  const borderColor = isDark ? "#2A2A2A" : "#EAEAEA";
+  const cardBg = isDark ? "#1C1C1E" : "#FFFFFF";
+  const borderColor = isDark ? "#2C2C2E" : "#EAEAEA";
+  const primaryColor = Colors[isDark ? "dark" : "light"].primary;
 
-  const { user } = useAuth();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
+  const [whatsappContacts, setWhatsappContacts] = useState<WhatsAppContact[]>([]);
   const [supportEmail, setSupportEmail] = useState<string | null>(null);
+  const [whatsappChannelUrl, setWhatsappChannelUrl] = useState<string | null>(null);
+  const [whatsappGroupUrl, setWhatsappGroupUrl] = useState<string | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch(api.ENDPOINTS.SETTINGS, {
+        const response = await api.fetchWithTimeout(api.ENDPOINTS.SETTINGS, {
           headers: api.getHeaders(),
         });
         const data = await response.json();
-        if (response.ok) {
-          setSupportWhatsapp(data.support_whatsapp || null);
+        if (response.ok && data) {
           setSupportEmail(data.support_email || null);
+          setWhatsappChannelUrl(data.whatsapp_channel_url || null);
+          setWhatsappGroupUrl(data.whatsapp_group_url || null);
+
+          // Parse multiple WhatsApp contacts if present
+          let parsedContacts: WhatsAppContact[] = [];
+          if (data.whatsapp_contacts) {
+            try {
+              const raw = typeof data.whatsapp_contacts === 'string' 
+                ? JSON.parse(data.whatsapp_contacts) 
+                : data.whatsapp_contacts;
+              if (Array.isArray(raw)) {
+                parsedContacts = raw;
+              }
+            } catch (e) {
+              console.warn("Could not parse whatsapp_contacts json", e);
+            }
+          }
+
+          if (parsedContacts.length === 0 && data.support_whatsapp) {
+            parsedContacts = [{ title: "WhatsApp Support", phone: data.support_whatsapp }];
+          }
+
+          setWhatsappContacts(parsedContacts);
         }
       } catch (error) {
         console.error("Failed to load support settings", error);
@@ -53,39 +78,16 @@ export default function SupportScreen() {
     fetchSettings();
   }, []);
 
-  const submitContactForm = async () => {
-    if (!name || !email || !message) {
-      Alert.alert(
-        "Error",
-        "Please fill in all required fields (Name, Email, Message).",
-      );
-      return;
-    }
-
-    setIsSubmitting(true);
+  const openLink = async (url: string, errorMsg: string) => {
     try {
-      const response = await fetch(api.ENDPOINTS.CONTACT, {
-        method: "POST",
-        headers: api.getHeaders(),
-        body: JSON.stringify({ name, email, subject, message }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert("Success", "Your message has been sent successfully!");
-        setSubject("");
-        setMessage("");
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
       } else {
-        Alert.alert("Error", data.message || "Failed to send message.");
+        await Linking.openURL(url);
       }
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        "A network error occurred while sending your message.",
-      );
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      Alert.alert("Link Error", errorMsg);
     }
   };
 
@@ -95,127 +97,115 @@ export default function SupportScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <ThemedText style={styles.sectionTitle}>Contact Us</ThemedText>
-
-        <View style={styles.contactGrid}>
-          {isLoadingSettings ? (
-            <ActivityIndicator
-              color="#4A90E2"
-              style={{ flex: 1, marginVertical: 20 }}
-            />
-          ) : (
-            <>
-              {supportWhatsapp && (
-                <TouchableOpacity
-                  onPress={() =>
-                    Linking.openURL(
-                      `https://wa.me/${supportWhatsapp.replace(/[^0-9]/g, "")}`,
-                    )
-                  }
-                  style={[
-                    styles.contactCard,
-                    { backgroundColor: cardBg, borderColor: borderColor },
-                  ]}
-                >
-                  <View
-                    style={[styles.iconBox, { backgroundColor: "#25D36620" }]}
-                  >
-                    <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
-                  </View>
-                  <ThemedText style={styles.contactTitle}>WhatsApp</ThemedText>
-                  <ThemedText style={styles.contactDesc}>
-                    {supportWhatsapp}
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
-
-              {supportEmail && (
-                <TouchableOpacity
-                  onPress={() => Linking.openURL(`mailto:${supportEmail}`)}
-                  style={[
-                    styles.contactCard,
-                    { backgroundColor: cardBg, borderColor: borderColor },
-                  ]}
-                >
-                  <View
-                    style={[styles.iconBox, { backgroundColor: "#F5A62320" }]}
-                  >
-                    <Ionicons name="mail" size={24} color="#F5A623" />
-                  </View>
-                  <ThemedText style={styles.contactTitle}>Email Us</ThemedText>
-                  <ThemedText style={styles.contactDesc}>
-                    {supportEmail}
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-
-        <ThemedText style={styles.sectionTitle}>Send us a Message</ThemedText>
-        <View
+        {/* QUICK LINK TO FAQ & HELP CENTER */}
+        <TouchableOpacity
+          activeOpacity={0.85}
           style={[
-            styles.formContainer,
-            { backgroundColor: cardBg, borderColor: borderColor },
+            styles.faqBanner,
+            {
+              backgroundColor: isDark ? "#0284C720" : "#E0F2FE",
+              borderColor: "#0284C740",
+            },
           ]}
+          onPress={() => router.push("/(settings)/help")}
         >
-          <TextInput
-            style={[
-              styles.input,
-              { color: isDark ? "#FFF" : "#000", borderColor: borderColor },
-            ]}
-            placeholder="Your Name *"
-            placeholderTextColor={isDark ? "#666" : "#999"}
-            value={name}
-            onChangeText={setName}
-          />
-          <TextInput
-            style={[
-              styles.input,
-              { color: isDark ? "#FFF" : "#000", borderColor: borderColor },
-            ]}
-            placeholder="Your Email *"
-            placeholderTextColor={isDark ? "#666" : "#999"}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <TextInput
-            style={[
-              styles.input,
-              { color: isDark ? "#FFF" : "#000", borderColor: borderColor },
-            ]}
-            placeholder="Subject (Optional)"
-            placeholderTextColor={isDark ? "#666" : "#999"}
-            value={subject}
-            onChangeText={setSubject}
-          />
-          <TextInput
-            style={[
-              styles.input,
-              styles.textArea,
-              { color: isDark ? "#FFF" : "#000", borderColor: borderColor },
-            ]}
-            placeholder="How can we help you? *"
-            placeholderTextColor={isDark ? "#666" : "#999"}
-            multiline
-            numberOfLines={4}
-            value={message}
-            onChangeText={setMessage}
-          />
-          <TouchableOpacity
-            style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
-            onPress={submitContactForm}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <ThemedText style={styles.submitBtnText}>Send Message</ThemedText>
+          <View style={styles.faqBannerContent}>
+            <Ionicons name="help-circle-outline" size={22} color="#0284C7" />
+            <View style={styles.faqBannerText}>
+              <ThemedText style={styles.faqBannerTitle}>Have Questions First?</ThemedText>
+              <ThemedText style={styles.faqBannerSubtitle}>
+                Browse our Help & FAQ section for instant answers
+              </ThemedText>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#0284C7" />
+        </TouchableOpacity>
+
+        <ThemedText style={styles.sectionTitle}>Customer Support Channels</ThemedText>
+
+        {isLoadingSettings ? (
+          <ActivityIndicator color={primaryColor} style={{ marginVertical: 20 }} />
+        ) : (
+          <View style={styles.channelGrid}>
+            {/* DYNAMIC WHATSAPP SUPPORT CONTACT LINES */}
+            {whatsappContacts.map((contact, idx) => (
+              <TouchableOpacity
+                key={`wa-${idx}`}
+                activeOpacity={0.8}
+                style={[styles.channelCard, { backgroundColor: cardBg, borderColor }]}
+                onPress={() =>
+                  openLink(
+                    `https://wa.me/${contact.phone.replace(/[^0-9]/g, "")}`,
+                    "Could not launch WhatsApp."
+                  )
+                }
+              >
+                <View style={[styles.channelIconBox, { backgroundColor: "#25D36618" }]}>
+                  <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
+                </View>
+                <View style={styles.channelTextContainer}>
+                  <ThemedText style={styles.channelTitle}>{contact.title || "WhatsApp Support"}</ThemedText>
+                  <ThemedText style={styles.channelDesc}>{contact.phone}</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#8E8E93" />
+              </TouchableOpacity>
+            ))}
+
+            {/* OFFICIAL EMAIL */}
+            {supportEmail && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.channelCard, { backgroundColor: cardBg, borderColor }]}
+                onPress={() => openLink(`mailto:${supportEmail}`, "Could not launch email client.")}
+              >
+                <View style={[styles.channelIconBox, { backgroundColor: "#0284C718" }]}>
+                  <Ionicons name="mail" size={24} color="#0284C7" />
+                </View>
+                <View style={styles.channelTextContainer}>
+                  <ThemedText style={styles.channelTitle}>Email Support</ThemedText>
+                  <ThemedText style={styles.channelDesc}>{supportEmail}</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#8E8E93" />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
-        </View>
+
+            {/* WHATSAPP OFFICIAL CHANNEL */}
+            {whatsappChannelUrl && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.channelCard, { backgroundColor: cardBg, borderColor }]}
+                onPress={() => openLink(whatsappChannelUrl, "Could not open WhatsApp Channel link.")}
+              >
+                <View style={[styles.channelIconBox, { backgroundColor: "#16A34A18" }]}>
+                  <Ionicons name="megaphone-outline" size={24} color="#16A34A" />
+                </View>
+                <View style={styles.channelTextContainer}>
+                  <ThemedText style={styles.channelTitle}>Official WhatsApp Channel</ThemedText>
+                  <ThemedText style={styles.channelDesc}>Get latest updates & deals</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#8E8E93" />
+              </TouchableOpacity>
+            )}
+
+            {/* WHATSAPP COMMUNITY / GROUP */}
+            {whatsappGroupUrl && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.channelCard, { backgroundColor: cardBg, borderColor }]}
+                onPress={() => openLink(whatsappGroupUrl, "Could not open WhatsApp Group link.")}
+              >
+                <View style={[styles.channelIconBox, { backgroundColor: "#9333EA18" }]}>
+                  <Ionicons name="people-outline" size={24} color="#9333EA" />
+                </View>
+                <View style={styles.channelTextContainer}>
+                  <ThemedText style={styles.channelTitle}>Community WhatsApp Group</ThemedText>
+                  <ThemedText style={styles.channelDesc}>Connect with buyers & sellers</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#8E8E93" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </ScrollView>
     </ThemedView>
   );
@@ -228,78 +218,69 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
+    gap: 16,
   },
-
+  faqBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  faqBannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  faqBannerText: {
+    flex: 1,
+    gap: 1,
+  },
+  faqBannerTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0284C7",
+  },
+  faqBannerSubtitle: {
+    fontSize: 11,
+    opacity: 0.8,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    marginBottom: 12,
-    marginTop: 8,
+    marginTop: 4,
   },
-  contactGrid: {
+  channelGrid: {
+    gap: 10,
+    marginBottom: 8,
+  },
+  channelCard: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 32,
-  },
-  contactCard: {
-    flex: 1,
+    alignItems: "center",
+    padding: 14,
     borderRadius: 16,
     borderWidth: 1,
-    padding: 16,
-    alignItems: "center",
-    gap: 8,
+    gap: 12,
   },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  channelIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
   },
-  contactTitle: {
-    fontSize: 15,
+  channelTextContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  channelTitle: {
+    fontSize: 14,
     fontWeight: "700",
   },
-  contactDesc: {
+  channelDesc: {
     fontSize: 12,
     opacity: 0.6,
-    textAlign: "center",
-  },
-
-  formContainer: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    gap: 12,
-    marginBottom: 32,
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 15,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
-    paddingTop: 12,
-  },
-  submitBtn: {
-    height: 48,
-    backgroundColor: "#4A90E2",
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  submitBtnDisabled: {
-    opacity: 0.6,
-  },
-  submitBtnText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });
