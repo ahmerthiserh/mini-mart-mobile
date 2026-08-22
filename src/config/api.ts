@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
   LOGOUT: `${API_BASE_URL}/logout`,
   USER_PROFILE: `${API_BASE_URL}/user`,
   UPDATE_PROFILE: `${API_BASE_URL}/user`,
+  DELETE_ACCOUNT: `${API_BASE_URL}/user`,
   PUSH_TOKEN: `${API_BASE_URL}/user/push-token`,
 
   // Products & Reviews

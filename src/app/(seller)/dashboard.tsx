@@ -317,17 +317,19 @@ export default function SellerDashboardScreen() {
                 </TouchableOpacity>
               </View>
               <View style={[styles.ordersCard, { backgroundColor: cardBg, borderColor }]}>
-                {data.recent_orders.map((order, idx) => (
-                  <View
-                    key={order.id || idx}
-                    style={[
-                      styles.orderItemRow,
-                      idx < data.recent_orders!.length - 1 && {
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                        borderBottomColor: borderColor,
-                      },
-                    ]}
-                  >
+                {data.recent_orders.slice(0, 3).map((order, idx) => {
+                  const recentSlice = data.recent_orders!.slice(0, 3);
+                  return (
+                    <View
+                      key={order.id || idx}
+                      style={[
+                        styles.orderItemRow,
+                        idx < recentSlice.length - 1 && {
+                          borderBottomWidth: StyleSheet.hairlineWidth,
+                          borderBottomColor: borderColor,
+                        },
+                      ]}
+                    >
                     <View style={styles.orderLeftCol}>
                       <ThemedText style={styles.orderTitle} numberOfLines={1}>
                         {order.product?.name || 'Store Product'}
@@ -344,8 +346,9 @@ export default function SellerDashboardScreen() {
                         <ThemedText style={styles.statusPillText}>{order.status}</ThemedText>
                       </View>
                     </View>
-                  </View>
-                ))}
+                    </View>
+                  );
+                })}
               </View>
             </>
           )}

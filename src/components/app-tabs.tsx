@@ -16,10 +16,14 @@ export default function AppTabs() {
   const canManageProducts = !!(
     user?.can_manage_products ||
     user?.is_seller ||
+    user?.is_admin ||
     (Array.isArray(user?.roles) &&
-      (user.roles.includes("seller") || user.roles.includes("Seller"))) ||
+      (user.roles.includes("Seller") ||
+       user.roles.includes("Admin") ||
+       user.roles.includes("Super Admin"))) ||
     (Array.isArray(user?.permissions) &&
-      user.permissions.includes("manage products"))
+      (user.permissions.includes("manage products") ||
+       user.permissions.includes("view admin dashboard")))
   );
 
   return (
@@ -82,9 +86,25 @@ export default function AppTabs() {
         }}
       />
       <Tabs.Screen
+        name="(seller)/dashboard"
+        options={{
+          title: "Dashboard",
+          href: canManageProducts ? "/(seller)/dashboard" : null,
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "speedometer" : "speedometer-outline"}
+              size={23}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="categories"
         options={{
           title: "Categories",
+          href: canManageProducts ? null : "/categories",
           headerShown: true,
           header: () => <HomeHeader />,
           tabBarIcon: ({ color, focused }) => (
@@ -130,7 +150,7 @@ export default function AppTabs() {
         }} 
       />
 
-      {HIDDEN_ROUTES.map((route) => (
+      {HIDDEN_ROUTES.filter((r) => r.name !== "(seller)/dashboard").map((route) => (
         <Tabs.Screen
           key={route.name}
           name={route.name}

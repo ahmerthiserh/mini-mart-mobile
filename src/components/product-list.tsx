@@ -60,7 +60,7 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
       const isDark = colorScheme === "dark";
       const router = useRouter();
       const { token } = useAuth();
-      const { refreshCart } = useCart();
+      const { refreshCart, cartItems } = useCart();
       const { showToast } = useToast();
 
       const borderColor = isDark ? "#2C2C2E" : "#EFEFEF";
@@ -69,7 +69,7 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
       const [products, setProducts] = useState<Product[]>([]);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState<string | null>(null);
-      const [addedToCart, setAddedToCart] = useState<Set<number>>(new Set());
+      const addedToCart = React.useMemo(() => new Set(cartItems.map((item) => item.product_id)), [cartItems]);
       const [nextPageUrl, setNextPageUrl] = useState<string | null>(null);
       const [isFetchingMore, setIsFetchingMore] = useState(false);
 
@@ -189,11 +189,6 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
                console.error("Failed to add to cart:", response.status, errText);
                showToast("Could not add item to cart", "error");
             } else {
-               setAddedToCart((prev) => {
-                  const newSet = new Set(prev);
-                  newSet.add(product.id);
-                  return newSet;
-               });
                refreshCart();
                showToast(`${product.name} added to cart`, "success");
             }

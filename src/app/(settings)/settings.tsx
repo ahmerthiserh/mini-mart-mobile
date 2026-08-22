@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity, useColorScheme, Switch } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, ScrollView, View, TouchableOpacity, useColorScheme, Switch, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
+import { useAlert } from '@/context/AlertContext';
+import api from '@/config/api';
 
 import * as WebBrowser from 'expo-web-browser';
 
@@ -12,17 +16,51 @@ export default function SettingsScreen() {
   const isDark = useColorScheme() === 'dark';
   const cardBg = isDark ? '#141414' : '#FFFFFF';
   const borderColor = isDark ? '#2A2A2A' : '#EAEAEA';
+  const { token, logout } = useAuth();
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   
   const [pushNotifs, setPushNotifs] = useState(true);
   const [emailNotifs, setEmailNotifs] = useState(false);
   const [promoEmails, setPromoEmails] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   const handleOpenPrivacyPolicy = async () => {
     await WebBrowser.openBrowserAsync('https://minimart.vetristech.com/privacy-policy');
   };
 
-  const handleOpenDeleteAccount = async () => {
-    await WebBrowser.openBrowserAsync('https://minimart.vetristech.com/account-deletion');
+  const handleOpenDeleteAccount = () => {
+    showAlert({
+      title: 'Delete Account',
+      message: 'Are you sure you want to permanently delete your account? This action cannot be undone and all your data will be removed.',
+      iconName: 'trash-outline',
+      iconColor: '#EF4444',
+      confirmText: 'Delete Permanently',
+      confirmBtnColor: '#EF4444',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        setDeleting(true);
+        try {
+          const response = await fetch(api.ENDPOINTS.DELETE_ACCOUNT, {
+            method: 'DELETE',
+            headers: api.getHeaders(token),
+          });
+          if (response.ok) {
+            await logout();
+            showToast('Your account has been deleted successfully.', 'success');
+            router.replace('/(auth)/login');
+          } else {
+            const data = await response.json();
+            showToast(data.message || 'Failed to delete account.', 'error');
+          }
+        } catch (err) {
+          console.error('Delete account error:', err);
+          showToast('Network error while deleting account.', 'error');
+        } finally {
+          setDeleting(false);
+        }
+      },
+    });
   };
 
   const SectionHeader = ({ title }: { title: string }) => (
@@ -101,12 +139,18 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={18} color={isDark ? '#666' : '#999'} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleOpenDeleteAccount} style={styles.row}>
+          <TouchableOpacity onPress={handleOpenDeleteAccount} disabled={deleting} style={styles.row}>
             <View style={styles.rowLeft}>
               <View style={[styles.iconBox, { backgroundColor: '#FF474720' }]}>
-                <Ionicons name="trash" size={18} color="#FF4747" />
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#FF4747" />
+                ) : (
+                  <Ionicons name="trash" size={18} color="#FF4747" />
+                )}
               </View>
-              <ThemedText style={[styles.rowText, { color: '#FF4747' }]}>Delete Account</ThemedText>
+              <ThemedText style={[styles.rowText, { color: '#FF4747' }]}>
+                {deleting ? 'Deleting Account...' : 'Delete Account'}
+              </ThemedText>
             </View>
           </TouchableOpacity>
         </View>

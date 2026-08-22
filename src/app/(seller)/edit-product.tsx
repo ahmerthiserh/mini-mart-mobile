@@ -538,7 +538,7 @@ export default function EditProductScreen() {
         onRequestClose={() => setCategoryModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: cardBg }]}>
+          <View style={[styles.modalContent, { backgroundColor: cardBg, paddingBottom: Math.max(insets.bottom, 20) }]}>
             <View style={styles.modalHeader}>
               <ThemedText style={styles.modalTitle}>Select Category</ThemedText>
               <TouchableOpacity onPress={() => setCategoryModalVisible(false)}>
@@ -597,7 +597,7 @@ export default function EditProductScreen() {
         onRequestClose={() => setUnitModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: cardBg }]}>
+          <View style={[styles.modalContent, { backgroundColor: cardBg, paddingBottom: Math.max(insets.bottom, 20) }]}>
             <View style={styles.modalHeader}>
               <ThemedText style={styles.modalTitle}>Select Unit</ThemedText>
               <TouchableOpacity onPress={() => setUnitModalVisible(false)}>
@@ -656,7 +656,7 @@ export default function EditProductScreen() {
         onRequestClose={() => setStatusModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: cardBg }]}>
+          <View style={[styles.modalContent, { backgroundColor: cardBg, paddingBottom: Math.max(insets.bottom, 20) }]}>
             <View style={styles.modalHeader}>
               <ThemedText style={styles.modalTitle}>Select Status</ThemedText>
               <TouchableOpacity onPress={() => setStatusModalVisible(false)}>

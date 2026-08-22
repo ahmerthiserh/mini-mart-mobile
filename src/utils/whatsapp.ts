@@ -1,21 +1,6 @@
 /**
- * Configurable Icons & Formatting Utility for WhatsApp Order & Inquiry Messages
+ * Plain-Text Formatting Utility for WhatsApp Order & Inquiry Messages
  */
-
-export const WA_ICONS = {
-  CART: '🛒',
-  STORE: '🏪',
-  PACKAGE: '📦',
-  PRICE_TAG: '🏷️',
-  QUANTITY: '🔢',
-  TOTAL: '💰',
-  SHIPPING: '🚚',
-  CUSTOMER: '👤',
-  CHAT: '💬',
-  BULLET: '  •',
-  TREE_NODE: '    └',
-  DIVIDER: '━━━━━━━━━━━━━━━━━━━━━━',
-};
 
 export type CartItemForWA = {
   name: string;
@@ -31,33 +16,32 @@ export function formatCartOrderWhatsAppMessage(params: {
   const { storeName, items, customerName } = params;
 
   let storeSubtotal = 0;
-  const itemBlocks = items.map((item) => {
+  const itemLines = items.map((item, index) => {
     const unitPrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
     const itemTotal = unitPrice * item.quantity;
     storeSubtotal += itemTotal;
 
-    return `${WA_ICONS.BULLET} *${item.name}*\n${WA_ICONS.TREE_NODE} Qty: ${item.quantity} × ₦${unitPrice.toLocaleString()} = *₦${itemTotal.toLocaleString()}*`;
+    return [
+      `  ${index + 1}. *${item.name}*`,
+      `      ${item.quantity} x ₦${unitPrice.toLocaleString()} = ₦${itemTotal.toLocaleString()}`,
+    ].join('\n');
   });
 
-  const lines = [
-    `${WA_ICONS.CART} *MINI-MART ORDER REQUEST*`,
-    WA_ICONS.DIVIDER,
-    `${WA_ICONS.STORE} *Store:* ${storeName}`,
-    '',
-    `${WA_ICONS.PACKAGE} *ORDER ITEMS:*`,
-    ...itemBlocks,
-    WA_ICONS.DIVIDER,
-    `${WA_ICONS.TOTAL} *Subtotal:* ₦${storeSubtotal.toLocaleString()}`,
+  const parts = [
+    `*ORDER REQUEST*`,
+    ``,
+    `Store: ${storeName}`,
+    customerName ? `Customer: ${customerName}` : null,
+    ``,
+    `*Items:*`,
+    ...itemLines,
+    ``,
+    `*Total: ₦${storeSubtotal.toLocaleString()}*`,
+    ``,
+    `Hello, please confirm availability and placement of this order. Thank you.`,
   ];
 
-  if (customerName) {
-    lines.push(`${WA_ICONS.CUSTOMER} *Customer:* ${customerName}`);
-  }
-
-  lines.push(WA_ICONS.DIVIDER);
-  lines.push(`${WA_ICONS.CHAT} *Hello! Please confirm item availability and order placement.*`);
-
-  return lines.join('\n');
+  return parts.filter((line) => line !== null).join('\n');
 }
 
 export function formatProductInquiryWhatsAppMessage(params: {
@@ -70,21 +54,17 @@ export function formatProductInquiryWhatsAppMessage(params: {
   const unitPrice = typeof price === 'string' ? parseFloat(price) : price;
   const totalPrice = unitPrice * quantity;
 
-  const lines = [
-    `${WA_ICONS.CART} *PRODUCT INQUIRY — MINI-MART*`,
-    WA_ICONS.DIVIDER,
-    `${WA_ICONS.PACKAGE} *Product:* ${productName}`,
-    `${WA_ICONS.PRICE_TAG} *Unit Price:* ₦${unitPrice.toLocaleString()}`,
-    `${WA_ICONS.QUANTITY} *Quantity:* ${quantity}`,
-    `${WA_ICONS.TOTAL} *Total Amount:* *₦${totalPrice.toLocaleString()}*`,
+  const parts = [
+    `*PRODUCT INQUIRY*`,
+    ``,
+    `Product: ${productName}`,
+    `Price: ₦${unitPrice.toLocaleString()}`,
+    `Quantity: ${quantity}`,
+    `*Total: ₦${totalPrice.toLocaleString()}*`,
+    ``,
+    customerName ? `Customer: ${customerName}\n` : null,
+    `Hello, I am interested in purchasing this product. Is it currently available for delivery? Thank you.`,
   ];
 
-  if (customerName) {
-    lines.push(`${WA_ICONS.CUSTOMER} *Customer:* ${customerName}`);
-  }
-
-  lines.push(WA_ICONS.DIVIDER);
-  lines.push(`${WA_ICONS.CHAT} *Hello! I am interested in purchasing this product. Is it currently in stock for delivery?*`);
-
-  return lines.join('\n');
+  return parts.filter((line) => line !== null).join('\n');
 }
