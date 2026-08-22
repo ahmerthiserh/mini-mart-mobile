@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, useColorScheme, Dimensions, ActivityIndicator, TextInput, Linking } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, useColorScheme, Dimensions, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { Colors } from '@/constants/Colors';
+import { formatProductInquiryWhatsAppMessage } from '@/utils/whatsapp';
 
 const { width } = Dimensions.get('window');
 
@@ -43,8 +44,8 @@ export default function ProductDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
-  const [quantity, setQuantity] = useState(3);
-  const [color, setColor] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [settings, setSettings] = useState<{ whatsapp_order_status?: string }>({});
   
   const imageScrollRef = useRef<ScrollView>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -53,10 +54,22 @@ export default function ProductDetailsScreen() {
     setProduct(null);
     setLoading(true);
     setActiveImageIndex(0);
-    setQuantity(3);
-    setColor('');
+    setQuantity(1);
     fetchProductDetails();
+    fetchSettings();
   }, [id]);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await api.fetchWithTimeout(api.ENDPOINTS.SETTINGS, { headers: api.getHeaders() });
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data || {});
+      }
+    } catch (e) {
+      console.warn("Could not load app settings", e);
+    }
+  };
 
   useEffect(() => {
     if (product && cartItems.some(item => item.product_id === product.id)) {
@@ -109,20 +122,14 @@ export default function ProductDetailsScreen() {
 
     if (!product) return;
 
-    if (!color.trim()) {
-      showToast('Please enter your preferred color', 'error');
-      return;
-    }
-
     setAddingToCart(true);
     try {
-      const response = await fetch(`${api.ENDPOINTS.CART}/add`, {
+      const response = await fetch(api.ENDPOINTS.ADD_TO_CART, {
         method: 'POST',
         headers: api.getHeaders(token),
         body: JSON.stringify({ 
           product_id: product.id, 
           quantity: quantity,
-          preferred_colors: color.trim()
         }),
       });
       if (response.ok) {
@@ -143,9 +150,11 @@ export default function ProductDetailsScreen() {
   const handleWhatsAppPress = () => {
     if (!product) return;
     const rawNumber = product.whatsapp_number || product.seller?.whatsapp_number || product.seller?.phone_number;
-    const yardsText = quantity > 1 ? ` (${quantity} yards)` : '';
-    const colorText = color.trim() ? ` - Color: ${color.trim()}` : '';
-    const message = `Hello! I am interested in buying: ${product.name}${yardsText}${colorText} for ₦${(parseFloat(product.price) * quantity).toLocaleString()}`;
+    const message = formatProductInquiryWhatsAppMessage({
+      productName: product.name,
+      price: product.price,
+      quantity: quantity,
+    });
     const encodedMsg = encodeURIComponent(message);
 
     let url = '';
@@ -267,24 +276,6 @@ export default function ProductDetailsScreen() {
           {/* Unit Price */}
           <View style={styles.priceRow}>
             <ThemedText style={[styles.priceText, { color: isDark ? '#FFF' : '#4A90E2' }]}>₦{parseFloat(product.price).toLocaleString()}</ThemedText>
-            <ThemedText style={styles.priceUnitText}> / yard</ThemedText>
-          </View>
-
-          {/* Divider */}
-          <View style={[styles.divider, { backgroundColor: borderColor }]} />
-
-          {/* Preferred Color Input */}
-          <View style={styles.colorInputContainer}>
-            <ThemedText style={styles.sectionTitle}>Preferred Color</ThemedText>
-            <View style={[styles.inputWrapper, { borderColor, backgroundColor: isDark ? '#2A2A2A' : '#EEEEEE' }]}>
-              <TextInput
-                style={[styles.textInput, { color: isDark ? '#FFF' : '#000' }]}
-                placeholder="e.g., Sky Blue, Royal Blue (Required)"
-                placeholderTextColor={isDark ? '#666' : '#999'}
-                value={color}
-                onChangeText={setColor}
-              />
-            </View>
           </View>
 
           {/* Description Section */}
@@ -301,20 +292,20 @@ export default function ProductDetailsScreen() {
           {/* Divider */}
           <View style={[styles.divider, { backgroundColor: borderColor }]} />
 
-          {/* Yards Selection and Total Price Row */}
+          {/* Quantity Selection and Total Price Row */}
           <View style={styles.yardsPriceRow}>
-            {/* Yards selector (Left Side) */}
+            {/* Quantity selector (Left Side) */}
             <View>
-              <ThemedText style={styles.sectionTitle}>Select Yards</ThemedText>
+              <ThemedText style={styles.sectionTitle}>Quantity</ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#2A2A2A' : '#EEEEEE', borderRadius: 8 }}>
                 <TouchableOpacity 
-                  onPress={() => setQuantity(Math.max(3, quantity - 1))}
-                  disabled={quantity <= 3}
-                  style={{ padding: 8, opacity: quantity <= 3 ? 0.3 : 1 }}
+                  onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity <= 1}
+                  style={{ padding: 8, opacity: quantity <= 1 ? 0.3 : 1 }}
                 >
                   <Ionicons name="remove" size={16} color={isDark ? '#FFF' : '#000'} />
                 </TouchableOpacity>
-                <ThemedText style={{ paddingHorizontal: 12, fontSize: 14, fontWeight: '700' }}>{quantity} yards</ThemedText>
+                <ThemedText style={{ paddingHorizontal: 12, fontSize: 14, fontWeight: '700' }}>{quantity}</ThemedText>
                 <TouchableOpacity 
                   onPress={() => setQuantity(quantity + 1)}
                   style={{ padding: 8 }}
@@ -333,12 +324,14 @@ export default function ProductDetailsScreen() {
 
           {/* Action Buttons Row */}
           <View style={styles.bottomActionRow}>
-            <TouchableOpacity
-              style={styles.whatsappOrderButton}
-              onPress={handleWhatsAppPress}
-            >
-              <Ionicons name="logo-whatsapp" size={22} color="#fff" />
-            </TouchableOpacity>
+            {settings.whatsapp_order_status !== 'inactive' && (
+              <TouchableOpacity
+                style={styles.whatsappOrderButton}
+                onPress={handleWhatsAppPress}
+              >
+                <Ionicons name="logo-whatsapp" size={22} color="#fff" />
+              </TouchableOpacity>
+            )}
 
             <AddToCartButton 
               onPress={handleAddToCart} 
@@ -346,7 +339,7 @@ export default function ProductDetailsScreen() {
                 flex: 1,
                 backgroundColor: isAdded ? Colors[isDark ? 'dark' : 'light'].success : Colors[isDark ? 'dark' : 'light'].primary 
               }} 
-              title={addingToCart ? "Adding..." : (isAdded ? "Go to Checkout" : "Add to Cart")}
+              title={addingToCart ? "Adding..." : (isAdded ? "Go to Cart" : "Add to Cart")}
               icon={isAdded ? "cart" : "add"}
             />
           </View>
@@ -419,21 +412,6 @@ const styles = StyleSheet.create({
   detailsContainer: {
     padding: 24,
   },
-  colorInputContainer: {
-    marginBottom: 0,
-  },
-  inputWrapper: {
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    justifyContent: 'center',
-  },
-  textInput: {
-    fontSize: 14,
-    fontWeight: '500',
-    padding: 0,
-  },
   titleCategoryContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -465,10 +443,6 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 22,
     fontWeight: '800',
-  },
-  priceUnitText: {
-    fontSize: 14,
-    opacity: 0.6,
   },
   divider: {
     height: 1,

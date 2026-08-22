@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   useColorScheme,
   Linking,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,6 +13,7 @@ import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useAlert } from "@/context/AlertContext";
 import { Colors } from "@/constants/Colors";
 import api from "@/config/api";
 
@@ -25,6 +25,7 @@ interface WhatsAppContact {
 export default function SupportScreen() {
   const router = useRouter();
   const isDark = useColorScheme() === "dark";
+  const { showError } = useAlert();
   const cardBg = isDark ? "#1C1C1E" : "#FFFFFF";
   const borderColor = isDark ? "#2C2C2E" : "#EAEAEA";
   const primaryColor = Colors[isDark ? "dark" : "light"].primary;
@@ -87,7 +88,7 @@ export default function SupportScreen() {
         await Linking.openURL(url);
       }
     } catch (err) {
-      Alert.alert("Link Error", errorMsg);
+      showError("Link Error", errorMsg);
     }
   };
 

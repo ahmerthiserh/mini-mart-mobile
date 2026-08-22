@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
   STORE_DETAILS: (id: string | number) => `${API_BASE_URL}/stores/${id}`,
   STORE_PRODUCTS: (id: string | number) => `${API_BASE_URL}/stores/${id}/products`,
   SELLER_TYPES: `${API_BASE_URL}/seller-types`,
+  BUSINESS_TYPES: `${API_BASE_URL}/business-types`,
 
   // Categories & Units
   CATEGORIES: `${API_BASE_URL}/categories`,
@@ -51,6 +52,7 @@ export const API_ENDPOINTS = {
   // Cart
   CART: `${API_BASE_URL}/cart`,
   ADD_TO_CART: `${API_BASE_URL}/cart/add`,
+  RECORD_WHATSAPP_ORDER: `${API_BASE_URL}/cart/whatsapp-order`,
   UPDATE_CART_ITEM: (itemId: string | number) => `${API_BASE_URL}/cart/${itemId}`,
   REMOVE_CART_ITEM: (itemId: string | number) => `${API_BASE_URL}/cart/${itemId}`,
 

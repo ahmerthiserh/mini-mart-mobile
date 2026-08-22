@@ -7,7 +7,6 @@ import {
   useColorScheme,
   Switch,
   Appearance,
-  Alert,
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +16,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useAlert } from "@/context/AlertContext";
 import { Colors } from "@/constants/Colors";
 import api from "@/config/api";
 
@@ -80,6 +80,7 @@ export default function MenuScreen() {
   const router = useRouter();
   const isDark = useColorScheme() === "dark";
   const { showToast } = useToast();
+  const { showConfirm } = useAlert();
 
   const cardBg = isDark ? "#1C1C1E" : "#FFFFFF";
   const borderColor = isDark ? "#2C2C2E" : "#EAEAEA";
@@ -159,36 +160,29 @@ export default function MenuScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
+    showConfirm(
       "Log Out",
       "Are you sure you want to log out of your account?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Log Out",
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            showToast("Successfully logged out", "info");
-            router.replace("/(auth)/login");
-          },
-        },
-      ]
+      async () => {
+        await logout();
+        showToast("Successfully logged out", "info");
+        router.replace("/(auth)/login");
+      },
+      undefined,
+      "Log Out",
+      "Cancel"
     );
   };
 
   const handleMenuItemPress = (item: MenuItemType) => {
     if (item.authRequired && !isLoggedIn) {
-      Alert.alert(
+      showConfirm(
         "Sign In Required",
         `Please log in or register to access ${item.title.toLowerCase()}.`,
-        [
-          { text: "Later", style: "cancel" },
-          {
-            text: "Sign In",
-            onPress: () => router.push("/(auth)/login"),
-          },
-        ]
+        () => router.push("/(auth)/login"),
+        undefined,
+        "Sign In",
+        "Later"
       );
       return;
     }

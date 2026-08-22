@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import { ActionAlertModal } from '@/components/action-alert-modal';
+import { Ionicons } from '@expo/vector-icons';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 
 export interface AlertOptions {
   title: string;
@@ -16,12 +16,27 @@ export interface AlertOptions {
 
 interface AlertContextType {
   showAlert: (options: AlertOptions) => void;
+  showSuccess: (title: string, message: string, onConfirm?: () => void) => void;
+  showError: (title: string, message: string, onConfirm?: () => void) => void;
+  showWarning: (title: string, message: string, onConfirm?: () => void) => void;
+  showConfirm: (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    onCancel?: () => void,
+    confirmText?: string,
+    cancelText?: string
+  ) => void;
   hideAlert: () => void;
 }
 
 const AlertContext = createContext<AlertContextType>({
-  showAlert: () => {},
-  hideAlert: () => {},
+  showAlert: () => { },
+  showSuccess: () => { },
+  showError: () => { },
+  showWarning: () => { },
+  showConfirm: () => { },
+  hideAlert: () => { },
 });
 
 export const useAlert = () => useContext(AlertContext);
@@ -42,6 +57,66 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setVisible(true);
   }, []);
 
+  const showSuccess = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showAlert({
+      title,
+      message,
+      iconName: 'checkmark-circle-outline',
+      iconColor: '#10B981',
+      confirmText: 'OK',
+      confirmBtnColor: '#10B981',
+      onConfirm,
+    });
+  }, [showAlert]);
+
+  const showError = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showAlert({
+      title,
+      message,
+      iconName: 'close-circle-outline',
+      iconColor: '#EF4444',
+      confirmText: 'OK',
+      confirmBtnColor: '#EF4444',
+      onConfirm,
+    });
+  }, [showAlert]);
+
+  const showWarning = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showAlert({
+      title,
+      message,
+      iconName: 'warning-outline',
+      iconColor: '#F59E0B',
+      confirmText: 'OK',
+      confirmBtnColor: '#F59E0B',
+      onConfirm,
+    });
+  }, [showAlert]);
+
+  const showConfirm = useCallback(
+    (
+      title: string,
+      message: string,
+      onConfirm: () => void,
+      onCancel?: () => void,
+      confirmText = 'Confirm',
+      cancelText = 'Cancel'
+    ) => {
+      showAlert({
+        title,
+        message,
+        iconName: 'help-circle-outline',
+        iconColor: '#0284C7',
+        confirmText,
+        confirmBtnColor: '#0284C7',
+        cancelText,
+        onConfirm,
+        onCancel,
+      });
+    },
+    [showAlert]
+  );
+
   const handleConfirm = () => {
     const callback = alertConfig?.onConfirm;
     hideAlert();
@@ -59,7 +134,16 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <AlertContext.Provider value={{ showAlert, hideAlert }}>
+    <AlertContext.Provider
+      value={{
+        showAlert,
+        showSuccess,
+        showError,
+        showWarning,
+        showConfirm,
+        hideAlert,
+      }}
+    >
       {children}
       {alertConfig && (
         <ActionAlertModal

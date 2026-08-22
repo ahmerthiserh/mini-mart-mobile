@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity, useColorScheme, Dimensions, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, useColorScheme, Dimensions, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -7,6 +7,8 @@ import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { PlaceholderGlow } from '@/components/placeholder-glow';
+import { StoreCard, StoreItem } from '@/components/stores/store-card';
+import { StoreFilterHeader, BusinessTypeOption } from '@/components/stores/store-filter-header';
 import api from '@/config/api';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
@@ -14,18 +16,6 @@ import { useToast } from '@/context/ToastContext';
 import { Colors } from '@/constants/Colors';
 
 const { width } = Dimensions.get('window');
-
-type StoreItem = {
-  id: number;
-  store_name: string;
-  store_slug: string;
-  description?: string;
-  logo?: string;
-  cover_image?: string;
-  is_verified?: boolean;
-  location?: string;
-  whatsapp_url?: string;
-};
 
 type Product = {
   id: number;
@@ -46,6 +36,10 @@ export default function StoresScreen() {
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [activeStore, setActiveStore] = useState<StoreItem | null>(null);
   
+  const [businessTypes, setBusinessTypes] = useState<BusinessTypeOption[]>([]);
+  const [selectedBusinessTypeId, setSelectedBusinessTypeId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
   const [storeProducts, setStoreProducts] = useState<Product[]>([]);
   const [loadingStores, setLoadingStores] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -59,7 +53,21 @@ export default function StoresScreen() {
 
   useEffect(() => {
     fetchStores();
+    fetchBusinessTypes();
   }, []);
+
+  const fetchBusinessTypes = async () => {
+    try {
+      const response = await fetch(api.ENDPOINTS.BUSINESS_TYPES);
+      if (response.ok) {
+        const data = await response.json();
+        const typesList = Array.isArray(data) ? data : (data.data || []);
+        setBusinessTypes(typesList);
+      }
+    } catch (e) {
+      console.log('Error fetching business types', e);
+    }
+  };
 
   const fetchStores = async (isRefresh = false) => {
     if (!isRefresh) setLoadingStores(true);
@@ -71,7 +79,7 @@ export default function StoresScreen() {
         return;
       }
       const data = await response.json();
-      let fetchedStores = [];
+      let fetchedStores: StoreItem[] = [];
       if (Array.isArray(data)) {
         fetchedStores = data;
       } else if (data.data && Array.isArray(data.data)) {
@@ -154,9 +162,50 @@ export default function StoresScreen() {
     }
   };
 
+  // Filter stores based on search & selected business type
+  const filteredStores = stores.filter((store) => {
+    if (searchQuery.trim().length > 0) {
+      const q = searchQuery.toLowerCase().trim();
+      const nameMatch = store.store_name?.toLowerCase().includes(q);
+      const descMatch = store.description?.toLowerCase().includes(q);
+      const locMatch = store.location?.toLowerCase().includes(q);
+      if (!nameMatch && !descMatch && !locMatch) return false;
+    }
+
+    if (selectedBusinessTypeId !== null) {
+      const selectedType = businessTypes.find(b => Number(b.id) === Number(selectedBusinessTypeId));
+      
+      if (store.business_type_id != null) {
+        if (Number(store.business_type_id) !== Number(selectedBusinessTypeId)) {
+          return false;
+        }
+      } else if (store.business_type_name && selectedType) {
+        const sName = store.business_type_name.toLowerCase();
+        const tName = selectedType.name.toLowerCase();
+        if (!sName.includes(tName) && !tName.includes(sName)) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
   if (activeStore === null) {
     return (
       <ThemedView style={styles.container}>
+        {/* Search & Business Category Filters Component */}
+        <StoreFilterHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          businessTypes={businessTypes}
+          stores={stores}
+          selectedBusinessTypeId={selectedBusinessTypeId}
+          onSelectBusinessType={setSelectedBusinessTypeId}
+        />
+
         {loadingStores ? (
           <View style={styles.centerLoading}>
             <ActivityIndicator size="large" color={Colors[isDark ? 'dark' : 'light'].primary} />
@@ -173,65 +222,39 @@ export default function StoresScreen() {
               <ThemedText style={[styles.retryBtnText, { color: isDark ? '#000' : '#fff' }]}>Try Again</ThemedText>
             </TouchableOpacity>
           </View>
-        ) : stores.length === 0 ? (
+        ) : filteredStores.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="storefront-outline" size={48} color="#A0A0A0" />
             <ThemedText style={styles.errorTitle}>No Stores Found</ThemedText>
-            <ThemedText style={styles.errorSubtitle}>There are currently no active merchant stores available.</ThemedText>
+            <ThemedText style={styles.errorSubtitle}>
+              {searchQuery || selectedBusinessTypeId !== null 
+                ? 'No stores match your selected business filter or search query.' 
+                : 'There are currently no active merchant stores available.'}
+            </ThemedText>
+            {(searchQuery || selectedBusinessTypeId !== null) && (
+              <TouchableOpacity 
+                style={[styles.retryBtn, { backgroundColor: Colors[isDark ? 'dark' : 'light'].primary }]}
+                onPress={() => {
+                  setSearchQuery('');
+                  setSelectedBusinessTypeId(null);
+                }}
+              >
+                <ThemedText style={[styles.retryBtnText, { color: isDark ? '#000' : '#fff' }]}>Reset Filters</ThemedText>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <FlatList
-            data={stores}
+            data={filteredStores}
             keyExtractor={(item) => item.id.toString()}
             numColumns={2}
             columnWrapperStyle={styles.storeColumnWrapper}
             contentContainerStyle={styles.storesListContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#fff' : '#000'} />}
             renderItem={({ item: store }) => (
-              <TouchableOpacity 
-                style={[styles.storeCard, { borderColor, backgroundColor: cardBg }]} 
-                onPress={() => handleStorePress(store)}
-              >
-                {/* Cover / Header Banner */}
-                <View style={styles.coverContainer}>
-                  <PlaceholderGlow style={StyleSheet.absoluteFill} />
-                  {store.cover_image ? (
-                    <Image source={{ uri: store.cover_image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-                  ) : (
-                    <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? '#262626' : '#E8E8E8' }]} />
-                  )}
-                  {store.is_verified && (
-                    <View style={styles.verifiedBadge}>
-                      <Ionicons name="checkmark-circle" size={12} color="#00C853" />
-                      <ThemedText style={styles.verifiedText}>Verified</ThemedText>
-                    </View>
-                  )}
-                </View>
-
-                {/* Store Body */}
-                <View style={styles.storeBody}>
-                  {/* Logo Overlay */}
-                  <View style={[styles.logoContainer, { borderColor: cardBg, backgroundColor: isDark ? '#333' : '#F0F0F0' }]}>
-                    {store.logo ? (
-                      <Image source={{ uri: store.logo }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={200} />
-                    ) : (
-                      <ThemedText style={{ fontSize: 16, fontWeight: '800' }}>
-                        {store.store_name.charAt(0).toUpperCase()}
-                      </ThemedText>
-                    )}
-                  </View>
-
-                  <View style={styles.storeInfoText}>
-                    <ThemedText style={styles.storeName} numberOfLines={1}>{store.store_name}</ThemedText>
-                    {store.location && (
-                      <View style={styles.locationRow}>
-                        <Ionicons name="location-outline" size={11} color={isDark ? '#AAA' : '#666'} style={{ marginTop: 1 }} />
-                        <ThemedText style={styles.locationText} numberOfLines={2}>{store.location}</ThemedText>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
+              <StoreCard store={store} onPress={handleStorePress} />
             )}
           />
         )}
@@ -328,78 +351,6 @@ const styles = StyleSheet.create({
   },
   storesListContent: {
     paddingVertical: 12,
-  },
-  storeCard: {
-    width: (width - 34) / 2,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  coverContainer: {
-    width: '100%',
-    height: 70,
-    position: 'relative',
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  verifiedText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  storeBody: {
-    paddingHorizontal: 8,
-    paddingBottom: 10,
-    paddingTop: 0,
-    position: 'relative',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  logoContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 2,
-    marginTop: -20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  storeInfoText: {
-    width: '100%',
-    paddingTop: 4,
-    gap: 1,
-  },
-  storeName: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 3,
-  },
-  locationText: {
-    flex: 1,
-    fontSize: 10,
-    opacity: 0.6,
-    lineHeight: 14,
-  },
-  storeDescription: {
-    fontSize: 11,
-    opacity: 0.7,
-    marginTop: 2,
   },
   activeHeader: {
     flexDirection: 'row',

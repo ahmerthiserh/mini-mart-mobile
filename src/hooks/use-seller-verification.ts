@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useAlert } from "@/context/AlertContext";
 import { BadgeType } from "@/components/verification-badges";
 import api from "@/config/api";
 
@@ -13,6 +13,7 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
   const router = useRouter();
   const { user, token } = useAuth();
   const { showToast } = useToast();
+  const { showWarning, showError } = useAlert();
 
   const storeName = paramsStoreName || user?.name || "Your Store";
 
@@ -153,7 +154,7 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Permission Required", "Please grant photo library access to upload documents.");
+        showWarning("Permission Required", "Please grant photo library access to upload documents.");
         return;
       }
 
@@ -170,7 +171,7 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
         else setGeneralDocumentUri(uri);
       }
     } catch (error: any) {
-      Alert.alert(
+      showError(
         "Rebuild Required",
         "The app binary needs to compile native modules for image picking. Please restart your Android build using: npx expo run:android"
       );
@@ -181,7 +182,7 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Permission Required", "Please grant camera permissions to capture a live photo.");
+        showWarning("Permission Required", "Please grant camera permissions to capture a live photo.");
         return;
       }
 
@@ -198,7 +199,7 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
         else setGeneralDocumentUri(uri);
       }
     } catch (error: any) {
-      Alert.alert("Camera Error", error.message || "Failed to open camera device.");
+      showError("Camera Error", error.message || "Failed to open camera device.");
     }
   };
 
@@ -207,11 +208,11 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
   const handleSubmitVerification = async () => {
     if (activeLevel === "identity") {
       if (!fullName.trim()) {
-        Alert.alert("Required Field", "Please enter your full legal name as shown on your document.");
+        showWarning("Required Field", "Please enter your full legal name as shown on your document.");
         return;
       }
       if (!idNumber.trim()) {
-        Alert.alert(
+        showWarning(
           "Required Field",
           idType === "bvn"
             ? "Please enter your 11-digit BVN number."
@@ -222,7 +223,7 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
         return;
       }
       if ((idType === "bvn" || idType === "nin") && idNumber.trim().length !== 11) {
-        Alert.alert(
+        showWarning(
           "Invalid ID Number",
           idType === "bvn"
             ? "Bank Verification Number (BVN) must be exactly 11 digits."
@@ -231,22 +232,21 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
         return;
       }
       if (!dob.trim()) {
-        Alert.alert("Required Field", "Please select your Date of Birth.");
+        showWarning("Required Field", "Please select your Date of Birth.");
         return;
       }
       if (!selfieDocumentUri) {
-        Alert.alert("Missing Live Selfie", "Please take and upload a live selfie facial photo for identity verification.");
+        showWarning("Missing Live Selfie", "Please take and upload a live selfie facial photo for identity verification.");
         return;
       }
       if (idType !== "bvn" && idType !== "nin" && !idDocumentUri) {
-        Alert.alert("Missing ID Document", "Please upload a photo of your official Government ID card.");
+        showWarning("Missing ID Document", "Please upload a photo of your official Government ID card.");
         return;
       }
     }
 
     if (activeLevel === "business") {
       // CAC verification is optional for individual sellers.
-      // If user provided no CAC info, advance to next tab or complete step.
       if (!businessName.trim() && !businessNo.trim()) {
         const currentIndex = actionLevels.findIndex((lvl) => lvl.id === activeLevel);
         if (currentIndex !== -1 && currentIndex + 1 < actionLevels.length) {
@@ -259,11 +259,11 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
 
     if (activeLevel === "physical_store") {
       if (!shopAddress.trim() || !shopNo.trim()) {
-        Alert.alert("Required Field", "Please enter your physical shop address and shop number.");
+        showWarning("Required Field", "Please enter your physical shop address and shop number.");
         return;
       }
       if (!generalDocumentUri) {
-        Alert.alert("Missing Storefront Photo", "Please upload a photo of your physical shop front.");
+        showWarning("Missing Storefront Photo", "Please upload a photo of your physical shop front.");
         return;
       }
     }
@@ -373,12 +373,12 @@ export function useSellerVerification(paramsStoreName?: string, paramsTypeSlug?:
           json.message ||
           (json.errors ? Object.values(json.errors).flat().join("\n") : "Failed to submit verification request.");
         showToast(errorMsg, "error");
-        Alert.alert("Submission Error", errorMsg);
+        showError("Submission Error", errorMsg);
       }
     } catch (error: any) {
       console.error("Verification submit error:", error);
       showToast(error.message || "Network error submitting verification.", "error");
-      Alert.alert("Network Error", error.message || "Could not connect to verification server.");
+      showError("Network Error", error.message || "Could not connect to verification server.");
     } finally {
       setLoading(false);
     }

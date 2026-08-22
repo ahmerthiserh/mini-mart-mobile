@@ -55,7 +55,7 @@ export default function AppTabs() {
         options={{
           title: "Store",
           headerShown: true,
-          header: () => <HomeHeader />,
+          header: () => <HomeHeader showSearch={false} title="Stores Directory" />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "storefront" : "storefront-outline"}

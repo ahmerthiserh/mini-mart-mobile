@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
-import { StyleSheet, ScrollView, View, useColorScheme, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { StyleSheet, ScrollView, View, useColorScheme, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { useAlert } from '@/context/AlertContext';
 import api from '@/config/api';
-import { ActivityIndicator } from 'react-native';
 
 export default function AddPaymentScreen() {
   const isDark = useColorScheme() === 'dark';
   const cardBg = isDark ? '#141414' : '#FFFFFF';
   const borderColor = isDark ? '#2A2A2A' : '#EAEAEA';
   const router = useRouter();
+  const { showSuccess } = useAlert();
   
   const [name, setName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
@@ -95,15 +96,10 @@ export default function AddPaymentScreen() {
         setExpiry('');
         setError('');
         
-        Alert.alert(
+        showSuccess(
           'Success',
           'Your payment method has been added securely.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/(payment)/payment'),
-            },
-          ]
+          () => router.replace('/(payment)/payment')
         );
       } else {
         const errorData = await response.json();

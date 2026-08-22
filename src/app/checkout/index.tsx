@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, useColorScheme, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, useColorScheme, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Tabs } from 'expo-router';
@@ -11,6 +11,7 @@ import { HomeHeader } from '@/components/home-header';
 import { Colors } from '@/constants/Colors';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useAlert } from '@/context/AlertContext';
 import api from '@/config/api';
 
 export default function CheckoutScreen() {
@@ -18,6 +19,7 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const { cartCount, cartItems, refreshCart } = useCart();
   const { token } = useAuth();
+  const { showWarning, showError } = useAlert();
   
   const [loading, setLoading] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export default function CheckoutScreen() {
 
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
-      Alert.alert('Address Required', 'Please select a shipping address.');
+      showWarning('Address Required', 'Please select a shipping address.');
       return;
     }
 
@@ -100,11 +102,11 @@ export default function CheckoutScreen() {
           router.replace(`/(orders)/order-details?orderId=${data.order.id}`); 
         }
       } else {
-        Alert.alert('Checkout Failed', data.message || 'Something went wrong.');
+        showError('Checkout Failed', data.message || 'Something went wrong.');
       }
     } catch (error) {
       console.error('Failed to place order:', error);
-      Alert.alert('Error', 'Failed to connect to the server.');
+      showError('Error', 'Failed to connect to the server.');
     } finally {
       setLoading(false);
     }

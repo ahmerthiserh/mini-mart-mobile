@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
-  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -158,13 +157,14 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
       }
 
       try {
-        const response = await fetch(`${api.ENDPOINTS.CART}/add`, {
+        const response = await fetch(api.ENDPOINTS.ADD_TO_CART, {
           method: "POST",
           headers: api.getHeaders(token),
           body: JSON.stringify({ product_id: product.id, quantity: 1 }),
         });
         if (!response.ok) {
-          console.error("Failed to add to cart");
+          const errText = await response.text();
+          console.error("Failed to add to cart:", response.status, errText);
           showToast("Could not add item to cart", "error");
         } else {
           setAddedToCart((prev) => {
@@ -179,28 +179,6 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
         console.error("Error adding to cart", error);
         showToast("Network error", "error");
       }
-    };
-
-    const handleWhatsAppPress = (product: Product) => {
-      const message = `Hello! I am interested in buying: ${product.name} (₦${parseFloat(product.price).toLocaleString()})`;
-      const encodedMsg = encodeURIComponent(message);
-
-      let url = "";
-      if (product.whatsapp_number) {
-        const cleanNum = product.whatsapp_number.replace(/[^0-9]/g, "");
-        url = `https://wa.me/${cleanNum}?text=${encodedMsg}`;
-      } else if (product.whatsapp_url) {
-        url = product.whatsapp_url.includes("?")
-          ? `${product.whatsapp_url}&text=${encodedMsg}`
-          : `${product.whatsapp_url}?text=${encodedMsg}`;
-      } else {
-        showToast("Merchant WhatsApp number not available", "error");
-        return;
-      }
-
-      Linking.openURL(url).catch(() => {
-        showToast("Could not open WhatsApp", "error");
-      });
     };
 
     return (
@@ -325,7 +303,13 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
               <View style={styles.productInfo}>
                 {/* Clean, Visible Category Name */}
                 {product.category?.name ? (
-                  <ThemedText numberOfLines={1} style={styles.productCategory}>
+                  <ThemedText
+                    numberOfLines={1}
+                    style={[
+                      styles.productCategory,
+                      { color: isDark ? "#38BDF8" : "#0284C7" },
+                    ]}
+                  >
                     {product.category.name.toUpperCase()}
                   </ThemedText>
                 ) : null}
@@ -339,23 +323,11 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
                 </ThemedText>
 
                 <View style={styles.productFooter}>
-                  <View style={styles.priceContainer}>
-                    <ThemedText style={styles.priceCurrency}>₦</ThemedText>
-                    <ThemedText style={styles.productPrice}>
-                      {parseFloat(product.price).toLocaleString()}
-                    </ThemedText>
-                  </View>
+                  <ThemedText style={styles.productPrice}>
+                    ₦{parseFloat(product.price).toLocaleString()}
+                  </ThemedText>
 
                   <View style={styles.actionButtons}>
-                    {/* Direct WhatsApp Chat Action */}
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      style={styles.whatsappButton}
-                      onPress={() => handleWhatsAppPress(product)}
-                    >
-                      <Ionicons name="logo-whatsapp" size={15} color="#FFF" />
-                    </TouchableOpacity>
-
                     {/* Add to Cart Action Button - Fixed Blue / Green */}
                     <TouchableOpacity
                       activeOpacity={0.8}
@@ -430,32 +402,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
-  priceContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 1,
-  },
-  priceCurrency: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: BRAND_BLUE,
-  },
   productPrice: {
     fontWeight: "800",
-    fontSize: 14,
+    fontSize: 16,
   },
   actionButtons: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-  },
-  whatsappButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#25D366",
-    justifyContent: "center",
-    alignItems: "center",
   },
   addButton: {
     width: 28,

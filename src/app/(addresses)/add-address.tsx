@@ -4,8 +4,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { useAlert } from '@/context/AlertContext';
 import api from '@/config/api';
-import { ActivityIndicator, Alert, Modal, FlatList } from 'react-native';
+import { ActivityIndicator, Modal, FlatList } from 'react-native';
 
 const NIGERIA_STATES = [
   'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 
@@ -20,6 +21,7 @@ export default function AddAddressScreen() {
   const cardBg = isDark ? '#141414' : '#FFFFFF';
   const borderColor = isDark ? '#2A2A2A' : '#EAEAEA';
   const router = useRouter();
+  const { showSuccess } = useAlert();
   
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -61,16 +63,9 @@ export default function AddAddressScreen() {
         setZip('');
         setError('');
         
-        Alert.alert(
-          'Success',
-          'Address added successfully.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/(addresses)/addresses'),
-            },
-          ]
-        );
+        showSuccess('Success', 'Address added successfully.', () => {
+          router.replace('/(addresses)/addresses');
+        });
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Failed to add address');
