@@ -210,16 +210,26 @@ export default function CartScreen() {
       await Linking.openURL(url);
 
       // Record WhatsApp order on backend for Admin Statistics & clear items from cart
+      let recordSuccess = false;
       try {
-        await api.fetchWithTimeout(api.ENDPOINTS.RECORD_WHATSAPP_ORDER, {
+        const res = await api.fetchWithTimeout(api.ENDPOINTS.RECORD_WHATSAPP_ORDER, {
           method: 'POST',
           headers: api.getHeaders(token),
           body: JSON.stringify({
             cart_item_ids: selectedStoreItems.map(i => i.id),
           }),
         });
+        if (res.ok) {
+          recordSuccess = true;
+        } else {
+          console.warn('Record WhatsApp Order API status:', res.status, await res.text());
+        }
       } catch (e) {
         console.error('Failed to record WhatsApp order on backend', e);
+      }
+
+      // If record order API failed, manually delete items from server cart database
+      if (!recordSuccess) {
         for (const item of selectedStoreItems) {
           try {
             await fetch(api.ENDPOINTS.REMOVE_CART_ITEM(item.id), {
@@ -234,7 +244,7 @@ export default function CartScreen() {
 
       const removedIds = new Set(selectedStoreItems.map(i => i.id));
       setSelectedItems(prev => prev.filter(id => !removedIds.has(id)));
-      fetchCart();
+      setCartItems(prev => prev.filter(i => !removedIds.has(i.id)));
       refreshCart();
       showToast(`WhatsApp order recorded! Items from ${group.storeName} cleared.`, 'success');
     } catch (err) {

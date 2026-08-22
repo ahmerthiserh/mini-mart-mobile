@@ -41,6 +41,10 @@ export function SellerProductCard({
     item.status === "published" ? "published" : "draft"
   );
 
+  React.useEffect(() => {
+    setCurrentStatus(item.status === "published" ? "published" : "draft");
+  }, [item.status]);
+
   // Image preview modal state
   const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
 
@@ -241,7 +245,7 @@ export function SellerProductCard({
 
 const styles = StyleSheet.create({
   productCard: {
-    width: "48.5%",
+    width: "48%",
     borderRadius: 14,
     borderWidth: 1,
     overflow: "hidden",

@@ -2,6 +2,7 @@ export type HiddenRoute = {
   name: string;
   title: string;
   backHref: any;
+  customHeader?: boolean;
 };
 
 export const HIDDEN_ROUTES: HiddenRoute[] = [
@@ -86,6 +87,9 @@ export const HIDDEN_ROUTES: HiddenRoute[] = [
   { name: "checkout", title: "Checkout", backHref: "/cart" },
   
   // Seller
+  { name: "(seller)/dashboard", title: "Seller Dashboard", backHref: "/menu", customHeader: true },
+  { name: "(seller)/orders", title: "Seller Orders", backHref: "/(seller)/dashboard", customHeader: true },
+  { name: "(seller)/order-details/[id]", title: "Order Details", backHref: "/(seller)/orders", customHeader: true },
   { name: "(seller)/select-type", title: "Select Business Type", backHref: "/menu" },
   { name: "(seller)/onboarding", title: "Store Registration", backHref: "/(seller)/select-type" },
   { name: "(seller)/verification", title: "Seller Verification", backHref: "/menu" },

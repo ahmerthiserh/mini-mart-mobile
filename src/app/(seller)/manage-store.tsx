@@ -261,7 +261,7 @@ export default function SellerProductsScreen() {
           <View style={styles.productGrid}>
             {products.map((item) => (
               <SellerProductCard
-                key={item.id}
+                key={`${item.id}-${item.status}`}
                 item={item}
                 primaryColor={primaryColor}
                 onEdit={() =>
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 12,
+    rowGap: 12,
   },
   fab: {
     position: "absolute",

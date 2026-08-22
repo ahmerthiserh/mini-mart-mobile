@@ -23,6 +23,7 @@ import api from "@/config/api";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
+import { analytics } from "@/services/analytics";
 
 const { width } = Dimensions.get("window");
 const BRAND_BLUE = "#0284C7";
@@ -70,6 +71,26 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
     const [addedToCart, setAddedToCart] = useState<Set<number>>(new Set());
     const [nextPageUrl, setNextPageUrl] = useState<string | null>(null);
     const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+    const trackedImpressions = React.useRef(new Set<number>());
+    const onViewableItemsChanged = React.useRef(({ viewableItems }: { viewableItems: any[] }) => {
+      const newVisibleIds: number[] = [];
+      viewableItems.forEach((item) => {
+        const pId = Number(item.item?.id);
+        if (pId && !trackedImpressions.current.has(pId)) {
+          trackedImpressions.current.add(pId);
+          newVisibleIds.push(pId);
+        }
+      });
+      if (newVisibleIds.length > 0) {
+        analytics.trackProductImpressions(newVisibleIds);
+      }
+    }).current;
+
+    const viewabilityConfig = React.useRef({
+      itemVisiblePercentThreshold: 50,
+      minimumViewTime: 250,
+    }).current;
 
     useImperativeHandle(ref, () => ({
       refresh: (isRefresh = true) => fetchProducts(isRefresh),
@@ -201,6 +222,8 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         ListFooterComponent={
           isFetchingMore ? (
             <ActivityIndicator

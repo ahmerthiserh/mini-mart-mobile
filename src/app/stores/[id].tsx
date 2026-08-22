@@ -26,6 +26,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { Colors } from '@/constants/Colors';
+import { analytics } from '@/services/analytics';
 
 const { width } = Dimensions.get('window');
 
@@ -108,8 +109,31 @@ export default function StoreCatalogScreen() {
   });
 
   useEffect(() => {
-    if (id) fetchStoreProducts();
+    if (id) {
+      analytics.trackStoreView(Number(id));
+      fetchStoreProducts();
+    }
   }, [id]);
+
+  const trackedImpressions = useRef(new Set<number>());
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: any[] }) => {
+    const newVisibleIds: number[] = [];
+    viewableItems.forEach((item) => {
+      const pId = Number(item.item?.id);
+      if (pId && !trackedImpressions.current.has(pId)) {
+        trackedImpressions.current.add(pId);
+        newVisibleIds.push(pId);
+      }
+    });
+    if (newVisibleIds.length > 0) {
+      analytics.trackProductImpressions(newVisibleIds);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 250,
+  }).current;
 
   const fetchStoreProducts = async () => {
     setLoading(true);
@@ -363,6 +387,8 @@ export default function StoreCatalogScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#fff' : '#000'} />}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
           scrollEventThrottle={16}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           ListHeaderComponent={
             products.length === 0 ? null : <StoreHeader />
           }
@@ -398,9 +424,6 @@ export default function StoreCatalogScreen() {
                 <View style={styles.productFooter}>
                   <ThemedText style={styles.productPrice}>₦{parseFloat(product.price).toLocaleString()}</ThemedText>
                   <View style={styles.actionButtons}>
-                    <TouchableOpacity style={styles.waSmall} onPress={() => handleWhatsApp(product)}>
-                      <Ionicons name="logo-whatsapp" size={15} color="#fff" />
-                    </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.addButton, { backgroundColor: addedToCart.has(product.id) ? '#10B981' : Colors[isDark ? 'dark' : 'light'].primary }]}
                       onPress={() => handleAddToCart(product)}

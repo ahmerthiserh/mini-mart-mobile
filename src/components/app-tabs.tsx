@@ -137,16 +137,18 @@ export default function AppTabs() {
           options={{
             href: null,
             title: route.title,
-            headerShown: true,
+            headerShown: !route.customHeader,
             tabBarStyle: { display: "none" },
-            header: () => (
-              <HomeHeader
-                showSearch={false}
-                showBack={true}
-                title={route.title}
-                backHref={route.backHref}
-              />
-            ),
+            header: route.customHeader
+              ? undefined
+              : () => (
+                  <HomeHeader
+                    showSearch={false}
+                    showBack={true}
+                    title={route.title}
+                    backHref={route.backHref}
+                  />
+                ),
           }}
         />
       ))}

@@ -12,6 +12,7 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { Colors } from '@/constants/Colors';
 import { formatProductInquiryWhatsAppMessage } from '@/utils/whatsapp';
+import { analytics } from '@/services/analytics';
 
 const { width } = Dimensions.get('window');
 
@@ -57,6 +58,9 @@ export default function ProductDetailsScreen() {
     setQuantity(1);
     fetchProductDetails();
     fetchSettings();
+    if (id) {
+      analytics.trackProductView(Number(id));
+    }
   }, [id]);
 
   const fetchSettings = async () => {
@@ -324,15 +328,6 @@ export default function ProductDetailsScreen() {
 
           {/* Action Buttons Row */}
           <View style={styles.bottomActionRow}>
-            {settings.whatsapp_order_status !== 'inactive' && (
-              <TouchableOpacity
-                style={styles.whatsappOrderButton}
-                onPress={handleWhatsAppPress}
-              >
-                <Ionicons name="logo-whatsapp" size={22} color="#fff" />
-              </TouchableOpacity>
-            )}
-
             <AddToCartButton 
               onPress={handleAddToCart} 
               style={{ 

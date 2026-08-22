@@ -73,6 +73,7 @@ export const API_ENDPOINTS = {
   // Support & Settings
   CONTACT: `${API_BASE_URL}/contact`,
   SETTINGS: `${API_BASE_URL}/settings`,
+  ANALYTICS_TRACK: `${API_BASE_URL}/analytics/track`,
 
   // Vendor Mobile Endpoints
   VENDOR: {

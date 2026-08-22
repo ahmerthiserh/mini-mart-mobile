@@ -286,6 +286,19 @@ export default function MenuScreen() {
             <View style={[styles.menuList, { backgroundColor: cardBg, borderColor }]}>
               <TouchableOpacity
                 style={styles.menuItem}
+                onPress={() => router.push('/(seller)/dashboard' as any)}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                  <Ionicons name="analytics-outline" size={20} color={primaryColor} />
+                </View>
+                <View style={styles.menuItemTextContainer}>
+                  <ThemedText style={styles.menuItemTitle}>Seller Dashboard</ThemedText>
+                  <ThemedText style={styles.menuItemSub}>Sales, store visits & analytics</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={isDark ? '#555' : '#BBB'} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.menuItem}
                 onPress={() => router.push('/(seller)/store-profile' as any)}
               >
                 <View style={[styles.iconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
@@ -294,6 +307,19 @@ export default function MenuScreen() {
                 <View style={styles.menuItemTextContainer}>
                   <ThemedText style={styles.menuItemTitle}>Store Profile</ThemedText>
                   <ThemedText style={styles.menuItemSub}>Logo, cover image & store info</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={isDark ? '#555' : '#BBB'} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push('/(seller)/orders' as any)}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                  <Ionicons name="receipt-outline" size={20} color={primaryColor} />
+                </View>
+                <View style={styles.menuItemTextContainer}>
+                  <ThemedText style={styles.menuItemTitle}>Store Orders</ThemedText>
+                  <ThemedText style={styles.menuItemSub}>Accept, process & manage customer orders</ThemedText>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={isDark ? '#555' : '#BBB'} />
               </TouchableOpacity>
