@@ -21,6 +21,7 @@ type Props = {
   primaryColor: string;
   onEdit: () => void;
   onDelete: () => void;
+  onBoost?: () => void;
   onStatusChange?: () => void;
 };
 
@@ -29,6 +30,7 @@ export function SellerProductCard({
   primaryColor,
   onEdit,
   onDelete,
+  onBoost,
   onStatusChange,
 }: Props) {
   const isDark = useColorScheme() === "dark";
@@ -123,6 +125,14 @@ export function SellerProductCard({
             </View>
           )}
 
+          {/* BOOSTED BADGE */}
+          {item.is_featured && (
+            <View style={styles.featuredBadge}>
+              <Ionicons name="rocket" size={9} color="#FFF" />
+              <Text style={styles.featuredBadgeText}>Boosted</Text>
+            </View>
+          )}
+
           {/* FULL IMAGE EXPAND ICON */}
           {primaryImg && (
             <View style={styles.expandIconBadge}>
@@ -185,6 +195,19 @@ export function SellerProductCard({
 
         {/* ACTIONS WITH TEXT & ICONS */}
         <View style={[styles.cardActions, { backgroundColor: actionBg, borderColor }]}>
+          {onBoost && (
+            <>
+              <TouchableOpacity style={styles.actionBtn} onPress={onBoost}>
+                <Ionicons name="rocket" size={13} color="#F59E0B" />
+                <Text style={[styles.actionBtnText, { color: "#F59E0B", fontWeight: "700" }]}>
+                  {item.is_featured ? "Boosted" : "Boost"}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={[styles.divider, { backgroundColor: borderColor }]} />
+            </>
+          )}
+
           <TouchableOpacity style={styles.actionBtn} onPress={onEdit}>
             <Ionicons name="pencil" size={13} color="#0284C7" />
             <Text style={[styles.actionBtnText, { color: "#0284C7" }]}>Edit</Text>
@@ -277,6 +300,25 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.55)",
     padding: 4,
     borderRadius: 6,
+  },
+  featuredBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: "#F59E0B",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+    gap: 2,
+    zIndex: 2,
+  },
+  featuredBadgeText: {
+    color: "#FFF",
+    fontSize: 8.5,
+    fontWeight: "800",
+    textTransform: "uppercase",
   },
   statusBadge: {
     position: "absolute",

@@ -25,6 +25,7 @@ import api from "@/config/api";
 import { StoreIncompleteBanner } from "@/components/seller/store-incomplete-banner";
 import { SlotBanner } from "@/components/seller/slot-banner";
 import { SellerProductCard } from "@/components/seller/seller-product-card";
+import { BoostProductModal } from "@/components/seller/boost-product-modal";
 
 export default function SellerProductsScreen() {
   const router = useRouter();
@@ -40,6 +41,10 @@ export default function SellerProductsScreen() {
   const [slotInfo, setSlotInfo] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [storeInfo, setStoreInfo] = useState<any>(null);
+
+  // Boost Modal State
+  const [boostModalVisible, setBoostModalVisible] = useState(false);
+  const [boostProduct, setBoostProduct] = useState<any | null>(null);
 
   const borderColor = isDark ? "#2C2C2E" : "#EAEAEA";
   const primaryColor = Colors[isDark ? "dark" : "light"].primary;
@@ -271,12 +276,29 @@ export default function SellerProductsScreen() {
                   } as any)
                 }
                 onDelete={() => handleDeleteProduct(item.id, item.name)}
+                onBoost={() => {
+                  setBoostProduct(item);
+                  setBoostModalVisible(true);
+                }}
                 onStatusChange={() => fetchVendorProducts(searchQuery)}
               />
             ))}
           </View>
         )}
       </ScrollView>
+
+      {/* BOOST PRODUCT MODAL */}
+      <BoostProductModal
+        visible={boostModalVisible}
+        product={boostProduct}
+        onClose={() => {
+          setBoostModalVisible(false);
+          setBoostProduct(null);
+        }}
+        onSuccess={() => {
+          fetchVendorProducts(searchQuery);
+        }}
+      />
 
       {/* Floating Action Button (Add Product) */}
       <TouchableOpacity
