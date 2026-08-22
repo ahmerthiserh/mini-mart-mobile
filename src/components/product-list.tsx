@@ -11,7 +11,6 @@ import {
   Dimensions,
   useColorScheme,
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   Linking,
@@ -25,9 +24,9 @@ import api from "@/config/api";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
-import { Colors } from "@/constants/Colors";
 
 const { width } = Dimensions.get("window");
+const BRAND_BLUE = "#0284C7";
 
 type Product = {
   id: number;
@@ -63,8 +62,8 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
     const { refreshCart } = useCart();
     const { showToast } = useToast();
 
-    const borderColor = isDark ? "#333" : "#EAEAEA";
-    const cardBg = isDark ? "#141414" : "#FFFFFF";
+    const borderColor = isDark ? "#2C2C2E" : "#EFEFEF";
+    const cardBg = isDark ? "#1C1C1E" : "#FFFFFF";
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -218,7 +217,7 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
               refreshing={props.refreshing || false}
               onRefresh={props.onRefresh}
               tintColor={isDark ? "#fff" : "#000"}
-              colors={["#000"]}
+              colors={[BRAND_BLUE]}
             />
           ) : undefined
         }
@@ -227,17 +226,17 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
         ListFooterComponent={
           isFetchingMore ? (
             <ActivityIndicator
-              color={isDark ? "#fff" : "#000"}
+              color={BRAND_BLUE}
               style={{ marginVertical: 20 }}
             />
           ) : (
-            <View style={{ height: 20 }} />
+            <View style={{ height: 24 }} />
           )
         }
         ListEmptyComponent={
           loading ? (
             <View style={{ paddingVertical: 60, alignItems: "center", justifyContent: "center", width: "100%" }}>
-              <ActivityIndicator size="large" color={Colors[isDark ? "dark" : "light"].primary} />
+              <ActivityIndicator size="large" color={BRAND_BLUE} />
             </View>
           ) : error ? (
             <View style={styles.errorContainer}>
@@ -258,9 +257,7 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
               <TouchableOpacity
                 style={[
                   styles.retryButton,
-                  {
-                    backgroundColor: Colors[isDark ? "dark" : "light"].primary,
-                  },
+                  { backgroundColor: BRAND_BLUE },
                 ]}
                 onPress={() => {
                   fetchProducts();
@@ -269,12 +266,7 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
                   }
                 }}
               >
-                <ThemedText
-                  style={[
-                    styles.retryButtonText,
-                    { color: isDark ? "#000" : "#fff" },
-                  ]}
-                >
+                <ThemedText style={styles.retryButtonText}>
                   Try Again
                 </ThemedText>
               </TouchableOpacity>
@@ -296,74 +288,97 @@ export const ProductList = forwardRef<ProductListRef, ProductListProps>(
             </View>
           )
         }
-        renderItem={({ item: product }) => (
-          <TouchableOpacity
-            style={[
-              styles.productCard,
-              { borderColor, backgroundColor: cardBg },
-            ]}
-            onPress={() => router.push(`/product/${product.id}` as any)}
-          >
-            <View style={styles.productImageContainer}>
-              <PlaceholderGlow
-                style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
-                borderRadius={12}
-              />
-              {product.image && (
-                <Image
-                  source={{ uri: product.image }}
-                  style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
-                  contentFit="contain"
-                  transition={200}
-                />
-              )}
-            </View>
+        renderItem={({ item: product }) => {
+          const isItemAdded = addedToCart.has(product.id);
 
-            <View style={styles.productInfo}>
-              {product.category?.name ? (
-                <ThemedText style={styles.productCategory}>
-                  {product.category.name}
+          return (
+            <TouchableOpacity
+              activeOpacity={0.88}
+              style={[
+                styles.productCard,
+                {
+                  borderColor,
+                  backgroundColor: cardBg,
+                  shadowColor: "#000",
+                  shadowOpacity: isDark ? 0.35 : 0.05,
+                },
+              ]}
+              onPress={() => router.push(`/product/${product.id}` as any)}
+            >
+              {/* Product Image Box */}
+              <View style={styles.productImageContainer}>
+                <PlaceholderGlow
+                  style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
+                  borderRadius={12}
+                />
+                {product.image && (
+                  <Image
+                    source={{ uri: product.image }}
+                    style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
+                    contentFit="cover"
+                    transition={250}
+                  />
+                )}
+              </View>
+
+              {/* Product Details Info */}
+              <View style={styles.productInfo}>
+                {/* Clean, Visible Category Name */}
+                {product.category?.name ? (
+                  <ThemedText numberOfLines={1} style={styles.productCategory}>
+                    {product.category.name.toUpperCase()}
+                  </ThemedText>
+                ) : null}
+
+                <ThemedText
+                  type="default"
+                  style={styles.productName}
+                  numberOfLines={2}
+                >
+                  {product.name}
                 </ThemedText>
-              ) : null}
-              <ThemedText
-                type="default"
-                style={styles.productName}
-                numberOfLines={1}
-              >
-                {product.name}
-              </ThemedText>
-              <View style={styles.productFooter}>
-                <ThemedText style={styles.productPrice}>
-                  ₦{parseFloat(product.price).toLocaleString()}
-                </ThemedText>
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={styles.whatsappButton}
-                    onPress={() => handleWhatsAppPress(product)}
-                  >
-                    <Ionicons name="logo-whatsapp" size={17} color="#fff" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.addButton,
-                      {
-                        backgroundColor:
-                          Colors[isDark ? "dark" : "light"].primary,
-                      },
-                    ]}
-                    onPress={() => handleAddToCart(product)}
-                  >
-                    <Ionicons
-                      name="add"
-                      size={18}
-                      color={Colors[isDark ? "dark" : "light"].background}
-                    />
-                  </TouchableOpacity>
+
+                <View style={styles.productFooter}>
+                  <View style={styles.priceContainer}>
+                    <ThemedText style={styles.priceCurrency}>₦</ThemedText>
+                    <ThemedText style={styles.productPrice}>
+                      {parseFloat(product.price).toLocaleString()}
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.actionButtons}>
+                    {/* Direct WhatsApp Chat Action */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.whatsappButton}
+                      onPress={() => handleWhatsAppPress(product)}
+                    >
+                      <Ionicons name="logo-whatsapp" size={15} color="#FFF" />
+                    </TouchableOpacity>
+
+                    {/* Add to Cart Action Button - Fixed Blue / Green */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={[
+                        styles.addButton,
+                        {
+                          backgroundColor: isItemAdded ? "#10B981" : BRAND_BLUE,
+                        },
+                      ]}
+                      onPress={() => handleAddToCart(product)}
+                    >
+                      <Ionicons
+                        name={isItemAdded ? "checkmark" : "add"}
+                        size={16}
+                        color="#FFF"
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
+            </TouchableOpacity>
+          );
+        }}
       />
     );
   },
@@ -374,52 +389,65 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     justifyContent: "space-between",
   },
-  productGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 12,
-    justifyContent: "space-between",
-  },
   productCard: {
-    width: (width - 34) / 2, // 2 columns with tight spacing
-    marginBottom: 10,
+    width: (width - 32) / 2,
+    marginBottom: 12,
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 6,
+    borderRadius: 16,
+    padding: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
   },
   productImageContainer: {
     width: "100%",
-    aspectRatio: 1,
+    aspectRatio: 1.05,
+    borderRadius: 12,
+    overflow: "hidden",
     marginBottom: 6,
-  },
-  productImage: {
-    width: "100%",
-    height: "100%",
+    position: "relative",
   },
   productInfo: {
     gap: 2,
+    justifyContent: "space-between",
+    flex: 1,
   },
   productCategory: {
-    fontSize: 11,
-    opacity: 0.6,
+    fontSize: 10,
+    fontWeight: "700",
+    color: BRAND_BLUE,
+    letterSpacing: 0.5,
   },
   productName: {
     fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+    height: 36, // Exactly 2 lines space
   },
   productFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 2,
+    marginTop: 4,
+  },
+  priceContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 1,
+  },
+  priceCurrency: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: BRAND_BLUE,
   },
   productPrice: {
-    fontWeight: "700",
+    fontWeight: "800",
     fontSize: 14,
   },
   actionButtons: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
   },
   whatsappButton: {
     width: 28,
@@ -468,5 +496,6 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: 14,
     fontWeight: "600",
+    color: "#FFF",
   },
 });
